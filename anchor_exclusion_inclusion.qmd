@@ -1,0 +1,960 @@
+---
+title: "Anchor Representation: 2024 vs. 2026"
+format: pdf
+editor: visual
+---
+```{r, echo=FALSE}
+knitr::opts_chunk$set(
+  warning = FALSE,
+  message = FALSE,
+  echo = FALSE
+)
+
+suppressPackageStartupMessages({
+  library(tidyverse)
+})
+```
+
+# Overview
+
+This report compares anchor representation between the 2024 and 2026 calibration datasets.
+
+The purpose is to determine which anchors were sufficiently represented in each calibration period and which anchors were excluded because they did not meet the representation criterion.
+
+For **both 2024 and 2026**, an anchor is considered sufficiently represented if it appears in at least **80% of the available calibration files**.
+
+This analysis distinguishes between:
+
+* anchors retained in both analyses;
+* anchors retained in 2024 but not 2026;
+* anchors retained in 2026 but not 2024;
+* anchors that appeared in the raw data but were excluded from both analyses.
+
+The analysis uses anchor IDs only. Calibration values are not required for this comparison.
+
+---
+
+# 1. Load 2024 Calibration Files
+
+The 2024 files are identified by their filename pattern.
+
+```{r}
+files_2024 <- list.files(
+  "calibration_outputs",
+  pattern = "^calibrations_probeData_2024-\\d{2}-\\d{2}\\.csv$",
+  full.names = TRUE
+) %>%
+  sort()
+
+length(files_2024)
+```
+
+The number above is the total number of available 2024 calibration files.
+
+---
+
+# 2. Read 2024 Anchor IDs
+
+Each 2024 file is read only to obtain the anchor IDs.
+
+The IDs are immediately converted to character so that they have the same type used throughout the 2026 analysis.
+
+```{r}
+raw_ids_2024 <- map_dfr(
+  seq_along(files_2024),
+  function(i) {
+
+    dat <- read_csv(
+      files_2024[i],
+      col_names = FALSE,
+      col_types = cols(.default = col_character()),
+      na = c("", "NA")
+    )
+
+    tibble(
+      id = as.character(dat[[1]]),
+      file = basename(files_2024[i])
+    )
+  }
+)
+```
+
+Remove missing IDs:
+
+```{r}
+raw_ids_2024 <- raw_ids_2024 %>%
+  filter(
+    !is.na(id),
+    id != ""
+  ) %>%
+  mutate(
+    id = as.character(id)
+  )
+```
+
+---
+
+# 3. Apply the 80% Representation Criterion to 2024
+
+An anchor must appear in at least 80% of the available 2024 calibration files.
+
+```{r}
+n_files_2024 <- length(files_2024)
+
+threshold_2024 <- 0.80 * n_files_2024
+
+threshold_2024
+```
+
+Count the number of files containing each anchor:
+
+```{r}
+anchor_counts_2024 <- raw_ids_2024 %>%
+  distinct(
+    id,
+    file
+  ) %>%
+  count(
+    id,
+    name = "files_present"
+  ) %>%
+  mutate(
+    total_files = n_files_2024,
+    proportion_present = files_present / total_files,
+    retained_80pct = files_present >= threshold_2024
+  ) %>%
+  arrange(
+    desc(files_present),
+    id
+  )
+```
+
+The anchors retained for the 2024 analysis are:
+
+```{r}
+retained_2024 <- anchor_counts_2024 %>%
+  filter(retained_80pct) %>%
+  select(id) %>%
+  distinct() %>%
+  mutate(
+    id = as.character(id)
+  )
+```
+
+Number of retained 2024 anchors:
+
+```{r}
+nrow(retained_2024)
+```
+
+---
+
+# 4. Load 2026 Calibration Files
+
+```{r}
+files_2026 <- list.files(
+  "26_Calibration",
+  pattern = "\\.csv$",
+  full.names = TRUE
+) %>%
+  sort()
+
+length(files_2026)
+```
+
+---
+
+# 5. Remove 2026 Files with Fewer Than 500 Observations
+
+This reproduces the filtering used in the primary 2026 calibration analysis.
+
+```{r}
+df_list_2026 <- lapply(
+  files_2026,
+  read.csv
+)
+
+keep_2026 <- sapply(
+  df_list_2026,
+  function(x) {
+    !is.null(x) &&
+      nrow(x) >= 500
+  }
+)
+
+df_list_2026 <- df_list_2026[keep_2026]
+
+files_2026_retained <- files_2026[keep_2026]
+
+n_files_2026 <- length(files_2026_retained)
+
+n_files_2026
+```
+
+The 2026 representation analysis therefore uses only files containing at least 500 observations, consistent with the primary 2026 analysis.
+
+---
+
+# 6. Read 2026 Anchor IDs
+
+```{r}
+raw_ids_2026 <- map_dfr(
+  seq_along(df_list_2026),
+  function(i) {
+
+    dat <- df_list_2026[[i]]
+
+    tibble(
+      id = as.character(dat[[1]]),
+      file = basename(files_2026_retained[i])
+    )
+  }
+)
+```
+
+Remove missing IDs:
+
+```{r}
+raw_ids_2026 <- raw_ids_2026 %>%
+  filter(
+    !is.na(id),
+    id != ""
+  ) %>%
+  mutate(
+    id = as.character(id)
+  )
+```
+
+---
+
+# 7. Apply the 80% Representation Criterion to 2026
+
+An anchor must appear in at least 80% of the usable 2026 calibration files.
+
+```{r}
+threshold_2026 <- 0.80 * n_files_2026
+
+threshold_2026
+```
+
+Count files containing each anchor:
+
+```{r}
+anchor_counts_2026 <- raw_ids_2026 %>%
+  distinct(
+    id,
+    file
+  ) %>%
+  count(
+    id,
+    name = "files_present"
+  ) %>%
+  mutate(
+    total_files = n_files_2026,
+    proportion_present = files_present / total_files,
+    retained_80pct = files_present >= threshold_2026
+  ) %>%
+  arrange(
+    desc(files_present),
+    id
+  )
+```
+
+The anchors retained for the 2026 analysis are:
+
+```{r}
+retained_2026 <- anchor_counts_2026 %>%
+  filter(retained_80pct) %>%
+  select(id) %>%
+  distinct() %>%
+  mutate(
+    id = as.character(id)
+  )
+```
+
+Number of retained 2026 anchors:
+
+```{r}
+nrow(retained_2026)
+```
+
+---
+
+# 8. Verify ID Types
+
+Before comparing the datasets, explicitly force both ID columns to character.
+
+```{r}
+retained_2024 <- retained_2024 %>%
+  mutate(id = as.character(id))
+
+retained_2026 <- retained_2026 %>%
+  mutate(id = as.character(id))
+
+raw_ids_2024 <- raw_ids_2024 %>%
+  mutate(id = as.character(id))
+
+raw_ids_2026 <- raw_ids_2026 %>%
+  mutate(id = as.character(id))
+```
+
+Verify:
+
+```{r}
+data.frame(
+  dataset = c(
+    "retained_2024",
+    "retained_2026",
+    "raw_ids_2024",
+    "raw_ids_2026"
+  ),
+  id_type = c(
+    class(retained_2024$id)[1],
+    class(retained_2026$id)[1],
+    class(raw_ids_2024$id)[1],
+    class(raw_ids_2026$id)[1]
+  )
+)
+```
+
+All four should report `character`.
+
+---
+
+# 9. Anchors Retained in Both Years
+
+These are anchors that meet the 80% criterion in both datasets.
+
+```{r}
+retained_both <- inner_join(
+  retained_2024,
+  retained_2026,
+  by = "id"
+) %>%
+  arrange(id)
+```
+
+Number retained in both:
+
+```{r}
+nrow(retained_both)
+```
+
+View the IDs:
+
+```{r}
+retained_both
+```
+
+---
+
+# 10. Anchors Retained in 2024 but Not 2026
+
+These anchors met the 80% criterion in 2024 but did not meet it in 2026.
+
+```{r}
+retained_2024_only <- anti_join(
+  retained_2024,
+  retained_2026,
+  by = "id"
+) %>%
+  arrange(id)
+```
+
+Number:
+
+```{r}
+nrow(retained_2024_only)
+```
+
+IDs:
+
+```{r}
+retained_2024_only
+```
+
+---
+
+# 11. Anchors Retained in 2026 but Not 2024
+
+These anchors met the 80% criterion in 2026 but did not meet it in 2024.
+
+```{r}
+retained_2026_only <- anti_join(
+  retained_2026,
+  retained_2024,
+  by = "id"
+) %>%
+  arrange(id)
+```
+
+Number:
+
+```{r}
+nrow(retained_2026_only)
+```
+
+IDs:
+
+```{r}
+retained_2026_only
+```
+
+---
+
+# 12. All Raw Anchors Observed in 2024
+
+This represents every unique anchor that appeared at least once in the original 2024 calibration files.
+
+```{r}
+all_raw_2024 <- raw_ids_2024 %>%
+  distinct(id) %>%
+  mutate(
+    id = as.character(id)
+  ) %>%
+  arrange(id)
+```
+
+Number:
+
+```{r}
+nrow(all_raw_2024)
+```
+
+---
+
+# 13. All Raw Anchors Observed in 2026
+
+This represents every unique anchor that appeared at least once in the usable 2026 calibration files.
+
+```{r}
+all_raw_2026 <- raw_ids_2026 %>%
+  distinct(id) %>%
+  mutate(
+    id = as.character(id)
+  ) %>%
+  arrange(id)
+```
+
+Number:
+
+```{r}
+nrow(all_raw_2026)
+```
+
+---
+
+# 14. Anchors Excluded from Both Analyses
+
+An anchor is considered excluded from both analyses if:
+
+* it appeared in the raw 2024 and/or 2026 data;
+* it did not meet the 80% criterion in 2024;
+* it did not meet the 80% criterion in 2026.
+
+First create the complete set of anchors observed in either year.
+
+```{r}
+all_raw_anchors <- union(
+  all_raw_2024$id,
+  all_raw_2026$id
+) %>%
+  as.character()
+```
+
+Then remove every anchor retained in either analysis:
+
+```{r}
+retained_either_year <- union(
+  retained_2024$id,
+  retained_2026$id
+) %>%
+  as.character()
+```
+
+The resulting set consists of anchors excluded from both analyses:
+
+```{r}
+excluded_both <- tibble(
+  id = setdiff(
+    all_raw_anchors,
+    retained_either_year
+  )
+) %>%
+  arrange(id)
+```
+
+Number excluded from both:
+
+```{r}
+nrow(excluded_both)
+```
+
+IDs:
+
+```{r}
+excluded_both
+```
+
+---
+
+# 15. Determine Where the Excluded Anchors Appeared
+
+It is useful to distinguish anchors that were excluded from both but appeared in:
+
+* 2024 only;
+* 2026 only;
+* both years.
+
+## 15.1 Excluded from Both, Present in Both Raw Datasets
+
+```{r}
+excluded_both_raw <- excluded_both %>%
+  filter(
+    id %in% all_raw_2024$id,
+    id %in% all_raw_2026$id
+  ) %>%
+  arrange(id)
+```
+
+Number:
+
+```{r}
+nrow(excluded_both_raw)
+```
+
+IDs:
+
+```{r}
+excluded_both_raw
+```
+
+---
+
+## 15.2 Excluded from Both, Present in 2024 Only
+
+```{r}
+excluded_2024_only_raw <- excluded_both %>%
+  filter(
+    id %in% all_raw_2024$id,
+    !id %in% all_raw_2026$id
+  ) %>%
+  arrange(id)
+```
+
+Number:
+
+```{r}
+nrow(excluded_2024_only_raw)
+```
+
+IDs:
+
+```{r}
+excluded_2024_only_raw
+```
+
+---
+
+## 15.3 Excluded from Both, Present in 2026 Only
+
+```{r}
+excluded_2026_only_raw <- excluded_both %>%
+  filter(
+    id %in% all_raw_2026$id,
+    !id %in% all_raw_2024$id
+  ) %>%
+  arrange(id)
+```
+
+Number:
+
+```{r}
+nrow(excluded_2026_only_raw)
+```
+
+IDs:
+
+```{r}
+excluded_2026_only_raw
+```
+
+---
+
+# 16. Detailed Representation Table
+
+The following table combines the representation information for every anchor observed in either year.
+
+```{r}
+representation_comparison <- full_join(
+  anchor_counts_2024 %>%
+    select(
+      id,
+      files_2024 = files_present,
+      total_files_2024 = total_files,
+      proportion_2024 = proportion_present,
+      retained_2024 = retained_80pct
+    ),
+
+  anchor_counts_2026 %>%
+    select(
+      id,
+      files_2026 = files_present,
+      total_files_2026 = total_files,
+      proportion_2026 = proportion_present,
+      retained_2026 = retained_80pct
+    ),
+
+  by = "id"
+) %>%
+  mutate(
+    id = as.character(id),
+
+    present_2024 = !is.na(files_2024),
+    present_2026 = !is.na(files_2026),
+
+    retained_2024 = replace_na(
+      retained_2024,
+      FALSE
+    ),
+
+    retained_2026 = replace_na(
+      retained_2026,
+      FALSE
+    ),
+
+    classification = case_when(
+
+      retained_2024 & retained_2026 ~
+        "Retained in both",
+
+      retained_2024 & !retained_2026 ~
+        "Retained in 2024 only",
+
+      !retained_2024 & retained_2026 ~
+        "Retained in 2026 only",
+
+      !retained_2024 & !retained_2026 &
+        present_2024 & present_2026 ~
+        "Excluded from both; present in both raw datasets",
+
+      !retained_2024 & !retained_2026 &
+        present_2024 & !present_2026 ~
+        "Excluded from both; 2024 only",
+
+      !retained_2024 & !retained_2026 &
+        !present_2024 & present_2026 ~
+        "Excluded from both; 2026 only",
+
+      TRUE ~
+        "Other"
+    )
+  ) %>%
+  arrange(
+    classification,
+    id
+  )
+```
+
+View the complete table:
+
+```{r}
+representation_comparison
+```
+
+---
+
+# 17. Summary of Anchor Classification
+
+```{r}
+classification_summary <- representation_comparison %>%
+  count(
+    classification,
+    name = "number_of_anchors"
+  ) %>%
+  arrange(
+    desc(number_of_anchors)
+  )
+
+classification_summary
+```
+
+---
+
+# 18. Summary Table for the Report
+
+A more compact summary is useful for reporting the results.
+
+```{r}
+final_summary <- tibble(
+  category = c(
+    "Retained in both 2024 and 2026",
+    "Retained in 2024 only",
+    "Retained in 2026 only",
+    "Excluded from both; present in both raw datasets",
+    "Excluded from both; present in 2024 only",
+    "Excluded from both; present in 2026 only"
+  ),
+
+  number_of_anchors = c(
+    nrow(retained_both),
+    nrow(retained_2024_only),
+    nrow(retained_2026_only),
+    nrow(excluded_both_raw),
+    nrow(excluded_2024_only_raw),
+    nrow(excluded_2026_only_raw)
+  )
+)
+
+final_summary
+```
+
+---
+
+# 19. Representation Percentages
+
+The following calculates the percentage of all anchors observed in either raw dataset that fall into each category.
+
+```{r}
+final_summary_percentage <- final_summary %>%
+  mutate(
+    percentage_of_all_observed =
+      number_of_anchors /
+      length(all_raw_anchors)
+  )
+
+final_summary_percentage
+```
+
+---
+
+# 20. Compare 80% Representation Rates
+
+This table summarizes the number of anchors observed in each year and the number that passed the 80% criterion.
+
+```{r}
+representation_rates <- tibble(
+
+  year = c(
+    "2024",
+    "2026"
+  ),
+
+  total_files = c(
+    n_files_2024,
+    n_files_2026
+  ),
+
+  eighty_percent_threshold =
+    c(
+      ceiling(threshold_2024),
+      ceiling(threshold_2026)
+    ),
+
+  raw_anchors = c(
+    nrow(all_raw_2024),
+    nrow(all_raw_2026)
+  ),
+
+  retained_80pct = c(
+    nrow(retained_2024),
+    nrow(retained_2026)
+  )
+) %>%
+  mutate(
+    proportion_retained =
+      retained_80pct / raw_anchors
+  )
+
+representation_rates
+```
+
+---
+
+# 21. Anchors Retained in One Year but Not the Other
+
+This table is particularly useful for identifying changes in anchor availability between calibration campaigns.
+
+```{r}
+year_specific_anchors <- bind_rows(
+
+  retained_2024_only %>%
+    mutate(
+      classification = "Retained in 2024 only"
+    ),
+
+  retained_2026_only %>%
+    mutate(
+      classification = "Retained in 2026 only"
+    )
+) %>%
+  arrange(
+    classification,
+    id
+  )
+
+year_specific_anchors
+```
+
+---
+
+# 22. Anchors Excluded from Both but Observed in Either Dataset
+
+This is the group of anchors that may be particularly useful for investigating why anchors failed the representation criterion.
+
+```{r}
+excluded_from_both_detailed <- representation_comparison %>%
+  filter(
+    classification %in% c(
+      "Excluded from both; present in both raw datasets",
+      "Excluded from both; 2024 only",
+      "Excluded from both; 2026 only"
+    )
+  ) %>%
+  select(
+    id,
+    files_2024,
+    total_files_2024,
+    proportion_2024,
+    files_2026,
+    total_files_2026,
+    proportion_2026,
+    classification
+  ) %>%
+  arrange(
+    classification,
+    id
+  )
+
+excluded_from_both_detailed
+```
+
+---
+
+# 23. Most Poorly Represented Anchors
+
+The following table identifies anchors with the lowest representation in either year.
+
+This can help identify anchors that were particularly intermittent.
+
+```{r}
+poorly_represented <- representation_comparison %>%
+  mutate(
+    representation_2024 =
+      replace_na(
+        proportion_2024,
+        0
+      ),
+
+    representation_2026 =
+      replace_na(
+        proportion_2026,
+        0
+      ),
+
+    minimum_representation =
+      pmin(
+        representation_2024,
+        representation_2026
+      )
+  ) %>%
+  select(
+    id,
+    representation_2024,
+    representation_2026,
+    minimum_representation,
+    classification
+  ) %>%
+  arrange(
+    minimum_representation,
+    id
+  )
+
+head(
+  poorly_represented,
+  50
+)
+```
+
+---
+
+# 24. Export Results
+
+The major results are written to CSV files so they can be examined outside of the PDF report.
+
+```{r}
+write_csv(
+  representation_comparison,
+  "anchor_representation_comparison_all.csv"
+)
+
+write_csv(
+  retained_both,
+  "anchors_retained_both_2024_2026.csv"
+)
+
+write_csv(
+  retained_2024_only,
+  "anchors_retained_2024_only.csv"
+)
+
+write_csv(
+  retained_2026_only,
+  "anchors_retained_2026_only.csv"
+)
+
+write_csv(
+  excluded_both,
+  "anchors_excluded_both.csv"
+)
+
+write_csv(
+  excluded_both_raw,
+  "anchors_excluded_both_present_both_years.csv"
+)
+
+write_csv(
+  excluded_2024_only_raw,
+  "anchors_excluded_both_2024_only.csv"
+)
+
+write_csv(
+  excluded_2026_only_raw,
+  "anchors_excluded_both_2026_only.csv"
+)
+```
+
+---
+
+# 25. Final Interpretation
+
+The 80% representation criterion is applied independently to the two calibration periods.
+
+An anchor retained in 2024 therefore appeared in at least 80% of the available 2024 calibration files, while an anchor retained in 2026 appeared in at least 80% of the usable 2026 calibration files.
+
+The comparison separates three scientifically distinct groups:
+
+1. **Stable/repeated anchors:** retained in both 2024 and 2026.
+2. **Year-specific anchors:** retained in one calibration period but not the other.
+3. **Intermittent anchors:** observed in the raw data but excluded because they failed the 80% representation criterion.
+
+The final group can be particularly informative because failure to meet the 80% criterion may itself reflect changes in anchor availability, connectivity, geographic coverage, or other properties of the calibration system.
+
+```{r}
+final_summary
+```
+
+```
+
+### One important detail
+
+This version applies the criterion symmetrically, but **the denominator is not necessarily the same between years**. For 2024 it is the number of 2024 files found; for 2026 it is the number of 2026 files remaining after the `<500 observations` filter.
+
+So, for example, if there are 100 usable 2024 files, an anchor needs at least 80 appearances. If there are 80 usable 2026 files, it needs at least 64 appearances.
+
+That is the appropriate interpretation of "present in at least 80% of the available files" and keeps the criterion independent of the different amounts of missing data in the two campaigns.
+
+The resulting **`representation_comparison`** table is probably the most valuable object produced by this QMD: it gives you, for every anchor, its 2024 representation rate, 2026 representation rate, whether it passed each criterion, and its final classification. :contentReference[oaicite:1]{index=1}
+```
+
+[1]: https://dplyr.tidyverse.org/reference/filter-joins.html?utm_source=chatgpt.com "Filtering joins — filter-joins • dplyr"
