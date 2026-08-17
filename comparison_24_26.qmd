@@ -483,686 +483,1311 @@ comparison_summary <- bind_rows(
 
 comparison_summary
 ```
-
-# 8. Maximum Drift
-
-## 8.1 2024
-
+\newpage
 ```{r}
 ggplot(
   cooked_2024,
   aes(
     x = days,
     y = max.drift,
-    colour = id,
     group = id
   )
 ) +
+  
+  # Individual anchor trajectories
   geom_step(
     alpha = 0.06,
+    linewidth = 0.4,
+    color = "black"
+  ) +
+  
+  # 25th percentile
+  stat_summary(
+    aes(
+      group = 1,
+      color = "25th percentile"
+    ),
+    fun = \(x) quantile(x, 0.25, na.rm = TRUE),
+    geom = "line",
     linewidth = 0.4
   ) +
-  guides(color = "none") +
+  
+  # Mean
+  stat_summary(
+    aes(
+      group = 1,
+      color = "Mean"
+    ),
+    fun = mean,
+    geom = "line",
+    linewidth = 0.5
+  ) +
+  
+  # 75th percentile
+  stat_summary(
+    aes(
+      group = 1,
+      color = "75th percentile"
+    ),
+    fun = \(x) quantile(x, 0.75, na.rm = TRUE),
+    geom = "line",
+    linewidth = 0.4
+  ) +
+  
+  # 90th percentile
+  stat_summary(
+    aes(
+      group = 1,
+      color = "90th percentile"
+    ),
+    fun = \(x) quantile(x, 0.90, na.rm = TRUE),
+    geom = "line",
+    linewidth = 0.4
+  ) +
+  
+  # 95th percentile
+  stat_summary(
+    aes(
+      group = 1,
+      color = "95th percentile"
+    ),
+    fun = \(x) quantile(x, 0.95, na.rm = TRUE),
+    geom = "line",
+    linewidth = 0.4
+  ) +
+  
+  # 99th percentile
+  stat_summary(
+    aes(
+      group = 1,
+      color = "99th percentile"
+    ),
+    fun = \(x) quantile(x, 0.99, na.rm = TRUE),
+    geom = "line",
+    linewidth = 0.4
+  ) +
+  
+  # 99.9th percentile
+  stat_summary(
+    aes(
+      group = 1,
+      color = "99.9th percentile"
+    ),
+    fun = \(x) quantile(x, 0.999, na.rm = TRUE),
+    geom = "line",
+    linewidth = 0.4
+  ) +
+  
+  # Colors and legend
+  scale_color_manual(
+    name = "Statistic",
+    breaks = c(
+      "99.9th percentile",
+      "99th percentile",
+      "95th percentile",
+      "90th percentile",
+      "75th percentile",
+      "Mean",
+      "25th percentile"
+    ),
+    values = c(
+      "99.9th percentile" = "maroon",
+      "99th percentile"   = "magenta",
+      "95th percentile"   = "purple",
+      "90th percentile"   = "blue",
+      "75th percentile"   = "#20b2aa",
+      "Mean"              = "red",
+      "25th percentile"   = "green"
+    )
+  ) +
+  
   labs(
     title = "2024 Maximum Calibration Drift",
-    x = "Calendar days since first calibration",
+    x = "Days since first calibration",
     y = "Maximum deviation from Day 0"
   ) +
+  
   scale_y_continuous(
     labels = scales::percent_format(
       accuracy = 1
     )
   ) +
-  theme_minimal()
+  
+  theme_minimal() +
+  
+  theme(
+    legend.position = "right"
+  )
 ```
-
-## 8.2 2026
-
 ```{r}
 ggplot(
   cooked_2026,
   aes(
     x = days,
     y = max.drift,
-    colour = id,
     group = id
   )
 ) +
+  
+  # Individual anchor trajectories
   geom_step(
     alpha = 0.06,
+    linewidth = 0.4,
+    color = "black"
+  ) +
+  
+  # 25th percentile
+  stat_summary(
+    aes(
+      group = 1,
+      color = "25th percentile"
+    ),
+    fun = \(x) quantile(x, 0.25, na.rm = TRUE),
+    geom = "line",
     linewidth = 0.4
   ) +
-  guides(color = "none") +
+  
+  # Mean
+  stat_summary(
+    aes(
+      group = 1,
+      color = "Mean"
+    ),
+    fun = mean,
+    geom = "line",
+    linewidth = 0.5
+  ) +
+  
+  # 75th percentile
+  stat_summary(
+    aes(
+      group = 1,
+      color = "75th percentile"
+    ),
+    fun = \(x) quantile(x, 0.75, na.rm = TRUE),
+    geom = "line",
+    linewidth = 0.4
+  ) +
+  
+  # 90th percentile
+  stat_summary(
+    aes(
+      group = 1,
+      color = "90th percentile"
+    ),
+    fun = \(x) quantile(x, 0.90, na.rm = TRUE),
+    geom = "line",
+    linewidth = 0.4
+  ) +
+  
+  # 95th percentile
+  stat_summary(
+    aes(
+      group = 1,
+      color = "95th percentile"
+    ),
+    fun = \(x) quantile(x, 0.95, na.rm = TRUE),
+    geom = "line",
+    linewidth = 0.4
+  ) +
+  
+  # 99th percentile
+  stat_summary(
+    aes(
+      group = 1,
+      color = "99th percentile"
+    ),
+    fun = \(x) quantile(x, 0.99, na.rm = TRUE),
+    geom = "line",
+    linewidth = 0.4
+  ) +
+  
+  # 99.9th percentile
+  stat_summary(
+    aes(
+      group = 1,
+      color = "99.9th percentile"
+    ),
+    fun = \(x) quantile(x, 0.999, na.rm = TRUE),
+    geom = "line",
+    linewidth = 0.4
+  ) +
+  
+  # Colors and legend
+  scale_color_manual(
+    name = "Statistic",
+    breaks = c(
+      "99.9th percentile",
+      "99th percentile",
+      "95th percentile",
+      "90th percentile",
+      "75th percentile",
+      "Mean",
+      "25th percentile"
+    ),
+    values = c(
+      "99.9th percentile" = "maroon",
+      "99th percentile"   = "magenta",
+      "95th percentile"   = "purple",
+      "90th percentile"   = "blue",
+      "75th percentile"   = "#20b2aa",
+      "Mean"              = "red",
+      "25th percentile"   = "green"
+    )
+  ) +
+  
   labs(
     title = "2026 Maximum Calibration Drift",
-    x = "Calendar days since first calibration",
+    x = "Days since first calibration",
     y = "Maximum deviation from Day 0"
   ) +
+  
   scale_y_continuous(
     labels = scales::percent_format(
       accuracy = 1
     )
   ) +
-  theme_minimal()
-```
-
-# 9. Instantaneous Drift
-
-## 9.1 2024
-
-```{r}
-ggplot(
-  cooked_2024,
-  aes(
-    x = days,
-    y = drift,
-    colour = id,
-    group = id
+  
+  theme_minimal() +
+  
+  theme(
+    legend.position = "right"
   )
-) +
-  geom_step(
-    alpha = 0.06,
-    linewidth = 0.4
-  ) +
-  guides(color = "none") +
-  labs(
-    title = "2024 Instantaneous Calibration Drift",
-    x = "Calendar days since first calibration",
-    y = "Deviation from Day 0"
-  ) +
-  scale_y_continuous(
-    labels = scales::percent_format(
-      accuracy = 1
-    )
-  ) +
-  theme_minimal()
 ```
-
-## 9.2 2026
-
-```{r}
-ggplot(
-  cooked_2026,
-  aes(
-    x = days,
-    y = drift,
-    colour = id,
-    group = id
-  )
-) +
-  geom_step(
-    alpha = 0.06,
-    linewidth = 0.4
-  ) +
-  guides(color = "none") +
-  labs(
-    title = "2026 Instantaneous Calibration Drift",
-    x = "Calendar days since first calibration",
-    y = "Deviation from Day 0"
-  ) +
-  scale_y_continuous(
-    labels = scales::percent_format(
-      accuracy = 1
-    )
-  ) +
-  theme_minimal()
-```
-
 \newpage
-
-# 10. Maximum Drift Threshold Analysis
-
-The thresholds are the same as those used in Zach's analysis:
-
-* 1%
-* 2%
-* 5%
-* 10%
-* 20%
+# IN BETWEEN
 
 ```{r}
-thresholds <- c(
-  0.01,
-  0.02,
-  0.05,
-  0.10,
-  0.20
-)
-
-thresholds.pct <- c(
-  "1%",
-  "2%",
-  "5%",
-  "10%",
-  "20%"
-)
-```
-
-## 10.1 2024
-
-```{r}
-drift.proportion_2024 <- (
-  crossing(
-    cooked_2024,
-    threshold = thresholds
-  )
-  |> group_by(
-    threshold,
-    days
-  )
-  |> summarise(
-    drifted.above = sum(
-      max.drift > threshold
-    ),
-    .groups = "drop"
-  )
-  |> mutate(
-    threshold = ordered(
-      threshold,
-      levels = thresholds,
-      labels = thresholds.pct
-    )
-  )
-)
-```
-
-```{r}
-ggplot(
-  drift.proportion_2024,
-  aes(
-    x = days,
-    y = drifted.above,
-    colour = threshold,
-    group = threshold
-  )
-) +
-  geom_step(linewidth = 1) +
-  scale_x_continuous(
-    "Calendar days since first calibration",
-    limits = c(
-      0,
-      max(cooked_2024$days)
-    ),
-    breaks = seq(
-      0,
-      max(cooked_2024$days),
-      by = 7
-    )
-  ) +
-  scale_y_continuous(
-    "# anchors drifted past threshold",
-    limits = c(
-      0,
-      n_distinct(cooked_2024$id)
-    )
-  ) +
-  scale_colour_manual(
-    "Threshold",
-    values = c(
-      "1%" = "#0868ac",
-      "2%" = "#43a2ca",
-      "5%" = "#7bccc4",
-      "10%" = "#8c96c6",
-      "20%" = "#8856a7"
-    )
-  ) +
-  labs(
-    title = "2024: Anchors Ever Exceeding Drift Threshold"
-  ) +
-  theme_minimal()
-```
-
-## 10.2 2026
-
-```{r}
-drift.proportion_2026 <- (
-  crossing(
-    cooked_2026,
-    threshold = thresholds
-  )
-  |> group_by(
-    threshold,
-    days
-  )
-  |> summarise(
-    drifted.above = sum(
-      max.drift > threshold
-    ),
-    .groups = "drop"
-  )
-  |> mutate(
-    threshold = ordered(
-      threshold,
-      levels = thresholds,
-      labels = thresholds.pct
-    )
-  )
-)
-```
-
-```{r}
-ggplot(
-  drift.proportion_2026,
-  aes(
-    x = days,
-    y = drifted.above,
-    colour = threshold,
-    group = threshold
-  )
-) +
-  geom_step(linewidth = 1) +
-  scale_x_continuous(
-    "Calendar days since first calibration",
-    limits = c(
-      0,
-      max(cooked_2026$days)
-    ),
-    breaks = seq(
-      0,
-      max(cooked_2026$days),
-      by = 7
-    )
-  ) +
-  scale_y_continuous(
-    "# anchors drifted past threshold",
-    limits = c(
-      0,
-      n_distinct(cooked_2026$id)
-    )
-  ) +
-  scale_colour_manual(
-    "Threshold",
-    values = c(
-      "1%" = "#0868ac",
-      "2%" = "#43a2ca",
-      "5%" = "#7bccc4",
-      "10%" = "#8c96c6",
-      "20%" = "#8856a7"
-    )
-  ) +
-  labs(
-    title = "2026: Anchors Ever Exceeding Drift Threshold"
-  ) +
-  theme_minimal()
-```
-
-# 11. Instantaneous Drift Threshold Analysis
-
-This analysis counts the number of anchors that are currently beyond each threshold, rather than the number that have ever exceeded it.
-
-## 11.1 2024
-
-```{r}
-drift.proportion.2_2024 <- (
-  crossing(
-    cooked_2024,
-    threshold = thresholds
-  )
-  |> group_by(
-    threshold,
-    days
-  )
-  |> summarise(
-    drifted.above = sum(
-      drift > threshold
-    ),
-    .groups = "drop"
-  )
-  |> mutate(
-    threshold = ordered(
-      threshold,
-      levels = thresholds,
-      labels = thresholds.pct
-    )
-  )
-)
-```
-
-```{r}
-ggplot(
-  drift.proportion.2_2024,
-  aes(
-    x = days,
-    y = drifted.above,
-    colour = threshold,
-    group = threshold
-  )
-) +
-  geom_step(linewidth = 1) +
-  scale_x_continuous(
-    "Calendar days since first calibration",
-    limits = c(
-      0,
-      max(cooked_2024$days)
-    ),
-    breaks = seq(
-      0,
-      max(cooked_2024$days),
-      by = 7
-    )
-  ) +
-  scale_y_continuous(
-    "# anchors currently past threshold",
-    limits = c(
-      0,
-      n_distinct(cooked_2024$id)
-    )
-  ) +
-  scale_colour_manual(
-    "Threshold",
-    values = c(
-      "1%" = "#0868ac",
-      "2%" = "#43a2ca",
-      "5%" = "#7bccc4",
-      "10%" = "#8c96c6",
-      "20%" = "#8856a7"
-    )
-  ) +
-  labs(
-    title = "2024: Anchors Currently Exceeding Drift Threshold"
-  ) +
-  theme_minimal()
-```
-
-## 11.2 2026
-
-```{r}
-drift.proportion.2_2026 <- (
-  crossing(
-    cooked_2026,
-    threshold = thresholds
-  )
-  |> group_by(
-    threshold,
-    days
-  )
-  |> summarise(
-    drifted.above = sum(
-      drift > threshold
-    ),
-    .groups = "drop"
-  )
-  |> mutate(
-    threshold = ordered(
-      threshold,
-      levels = thresholds,
-      labels = thresholds.pct
-    )
-  )
-)
-```
-
-```{r}
-ggplot(
-  drift.proportion.2_2026,
-  aes(
-    x = days,
-    y = drifted.above,
-    colour = threshold,
-    group = threshold
-  )
-) +
-  geom_step(linewidth = 1) +
-  scale_x_continuous(
-    "Calendar days since first calibration",
-    limits = c(
-      0,
-      max(cooked_2026$days)
-    ),
-    breaks = seq(
-      0,
-      max(cooked_2026$days),
-      by = 7
-    )
-  ) +
-  scale_y_continuous(
-    "# anchors currently past threshold",
-    limits = c(
-      0,
-      n_distinct(cooked_2026$id)
-    )
-  ) +
-  scale_colour_manual(
-    "Threshold",
-    values = c(
-      "1%" = "#0868ac",
-      "2%" = "#43a2ca",
-      "5%" = "#7bccc4",
-      "10%" = "#8c96c6",
-      "20%" = "#8856a7"
-    )
-  ) +
-  labs(
-    title = "2026: Anchors Currently Exceeding Drift Threshold"
-  ) +
-  theme_minimal()
-```
-
-\newpage
-
-# 12. Direct 2024 vs. 2026 Comparison
-
-For direct comparison, it is useful to put both years onto the same plot.
-
-Because the datasets contain different numbers of anchors, percentages are more informative than raw counts.
-
-## 12.1 Maximum Drift: Percentage of Anchors
-
-```{r}
-max_drift_comparison <- bind_rows(
-
-  cooked_2024 %>%
-    group_by(days) %>%
-    summarise(
-      anchors = n_distinct(id),
-      .groups = "drop"
-    ),
-
-  cooked_2026 %>%
-    group_by(days) %>%
-    summarise(
-      anchors = n_distinct(id),
-      .groups = "drop"
-    )
-)
-```
-
-For the threshold comparison:
-
-```{r}
-max_threshold_comparison <- bind_rows(
-
-  crossing(
-    cooked_2024,
-    threshold = thresholds
+anchors_90_999_2024 <- cooked_2024 %>%
+  group_by(days) %>%
+  mutate(
+    q90 = quantile(max.drift, 0.90, na.rm = TRUE),
+    q999 = quantile(max.drift, 0.999, na.rm = TRUE)
   ) %>%
-    group_by(
-      days,
-      threshold
-    ) %>%
-    summarise(
-      drifted.above = sum(
-        max.drift > threshold
-      ),
-      total = n_distinct(id),
-      .groups = "drop"
-    ) %>%
-    mutate(
-      year = "2024",
-      proportion = drifted.above / total
-    ),
-
-  crossing(
-    cooked_2026,
-    threshold = thresholds
+  ungroup() %>%
+  filter(
+    max.drift >= q90,
+    max.drift <= q999
   ) %>%
-    group_by(
-      days,
-      threshold
-    ) %>%
-    summarise(
-      drifted.above = sum(
-        max.drift > threshold
-      ),
-      total = n_distinct(id),
-      .groups = "drop"
-    ) %>%
-    mutate(
-      year = "2026",
-      proportion = drifted.above / total
-    )
+  select(
+    days,
+    date,
+    id,
+    max.drift,
+    q90,
+    q999
+  ) %>%
+  arrange(days, desc(max.drift))
+```
+
+```{r}
+anchors_90_999_2026 <- cooked_2026 %>%
+  group_by(days) %>%
+  mutate(
+    q90 = quantile(max.drift, 0.90, na.rm = TRUE),
+    q999 = quantile(max.drift, 0.999, na.rm = TRUE)
+  ) %>%
+  ungroup() %>%
+  filter(
+    max.drift >= q90,
+    max.drift <= q999
+  ) %>%
+  select(
+    days,
+    date,
+    id,
+    max.drift,
+    q90,
+    q999
+  ) %>%
+  arrange(days, desc(max.drift))
+```
+
+```{r}
+head(anchors_90_999_2024, 20)
+```
+
+```{r}
+head(anchors_90_999_2026, 20)
+```
+# Find the IDs that enter this range at least once
+
+This may be closer to what you're asking: which anchors are responsible for the region between the 90th and 99.9th percentile at any point during the study?
+```{r}
+ids_90_999_2024 <- anchors_90_999_2024 %>%
+  distinct(id) %>%
+  arrange(id)
+
+ids_90_999_2024
+```
+
+```{r}
+ids_90_999_2026 <- anchors_90_999_2026 %>%
+  distinct(id) %>%
+  arrange(id)
+
+ids_90_999_2026
+```
+
+```{r}
+nrow(ids_90_999_2024)
+nrow(ids_90_999_2026)
+```
+
+# Find the IDs that are consistently in that range
+
+This is potentially more interesting scientifically.
+
+For example, suppose you want to know:
+
+Which anchors were between the 90th and 99.9th percentile on at least 50% of the available days?
+```{r}
+library(kableExtra)
+```
+
+
+```{r}
+persistent_90_999_2024 <- anchors_90_999_2024 %>%
+  count(id, name = "days_in_range") %>%
+  mutate(
+    total_days = n_distinct(cooked_2024$days),
+    proportion_days = days_in_range / total_days
+  ) %>%
+  filter(proportion_days >= 0.01) %>%
+  arrange(desc(proportion_days))
+```
+
+```{r}
+persistent_90_999_2026 <- anchors_90_999_2026 %>%
+  count(id, name = "days_in_range") %>%
+  mutate(
+    total_days = n_distinct(cooked_2026$days),
+    proportion_days = days_in_range / total_days
+  ) %>%
+  filter(proportion_days >= 0.01) %>%
+  arrange(desc(proportion_days))
+```
+```{r}
+persistent_90_999_2024 <- persistent_90_999_2024 %>%
+  mutate(id = as.character(id))
+
+persistent_90_999_2026 <- persistent_90_999_2026 %>%
+  mutate(id = as.character(id))
+
+kable(persistent_90_999_2024)
+kable(persistent_90_999_2026)
+```
+
+```{r}
+persistent_90_999_both <- persistent_90_999_2024 %>%
+  inner_join(
+    persistent_90_999_2026,
+    by = "id"
+  )
+
+kable(persistent_90_999_both)
+nrow(persistent_90_999_both)
+```
+
+```{r}
+cleaned_persistent_90_999_both <- persistent_90_999_both %>%
+  filter(
+    !(days_in_range.x == 1 & days_in_range.y == 1)
+  )
+
+kable(cleaned_persistent_90_999_both)
+nrow(cleaned_persistent_90_999_both)
+```
+```{r}
+nrow(persistent_90_999_both) - nrow(cleaned_persistent_90_999_both)
+```
+Anchors that were excluded from the cleaned)persistent 90-999 ID group: 191
+```{r}
+removed_persistent_90_999_both <- persistent_90_999_both %>%
+  anti_join(
+    cleaned_persistent_90_999_both,
+    by = "id"
+  )
+
+kable(removed_persistent_90_999_both)
+```
+
+```{r}
+landmarks <- read_csv(
+  "landmarks.csv",
+  show_col_types = FALSE
 ) %>%
   mutate(
-    threshold = factor(
-      threshold,
-      levels = thresholds,
-      labels = thresholds.pct
-    )
-  )
-```
-
-Plot:
-
-```{r}
-ggplot(
-  max_threshold_comparison,
-  aes(
-    x = days,
-    y = proportion,
-    colour = year,
-    linetype = year
-  )
-) +
-  geom_step(linewidth = 1) +
-  facet_wrap(
-    ~ threshold,
-    ncol = 1
-  ) +
-  scale_y_continuous(
-    "Proportion of anchors",
-    labels = scales::percent_format(
-      accuracy = 1
-    )
-  ) +
-  scale_colour_manual(
-    values = c(
-      "2024" = "#0868ac",
-      "2026" = "#d95f02"
-    )
-  ) +
-  labs(
-    title = "Maximum Calibration Drift: 2024 vs. 2026",
-    x = "Calendar days since first calibration",
-    colour = "Year",
-    linetype = "Year"
-  ) +
-  theme_minimal()
-```
-
-# 13. Instantaneous Drift: Percentage of Anchors
-
-```{r}
-instantaneous_threshold_comparison <- bind_rows(
-
-  crossing(
-    cooked_2024,
-    threshold = thresholds
+    pid = as.character(pid)
   ) %>%
-    group_by(
-      days,
-      threshold
-    ) %>%
-    summarise(
-      drifted.above = sum(
-        drift > threshold
-      ),
-      total = n_distinct(id),
-      .groups = "drop"
-    ) %>%
-    mutate(
-      year = "2024",
-      proportion = drifted.above / total
-    ),
+  select(
+    pid,
+    asn,
+    continent,
+    country,
+    city
+  )
 
-  crossing(
-    cooked_2026,
-    threshold = thresholds
-  ) %>%
-    group_by(
-      days,
-      threshold
-    ) %>%
-    summarise(
-      drifted.above = sum(
-        drift > threshold
-      ),
-      total = n_distinct(id),
-      .groups = "drop"
-    ) %>%
-    mutate(
-      year = "2026",
-      proportion = drifted.above / total
-    )
-) %>%
+cleaned_persistent_90_999_both_geo <- cleaned_persistent_90_999_both %>%
   mutate(
-    threshold = factor(
-      threshold,
-      levels = thresholds,
-      labels = thresholds.pct
-    )
+    id = as.character(id)
+  ) %>%
+  left_join(
+    landmarks,
+    by = c("id" = "pid")
   )
+
+kable(cleaned_persistent_90_999_both_geo)
+```
+
+# ASN summary
+```{r}
+asn_summary <- cleaned_persistent_90_999_both_geo %>%
+  filter(!is.na(asn)) %>%
+  count(asn, name = "anchor_count") %>%
+  mutate(
+    percent_of_anchors = 100 * anchor_count / sum(anchor_count)
+  ) %>%
+  arrange(desc(anchor_count), asn)
+
+# kable(asn_summary)
 ```
 
 ```{r}
-ggplot(
-  instantaneous_threshold_comparison,
-  aes(
-    x = days,
-    y = proportion,
-    colour = year,
-    linetype = year
-  )
-) +
-  geom_step(linewidth = 1) +
-  facet_wrap(
-    ~ threshold,
-    ncol = 1
-  ) +
-  scale_y_continuous(
-    "Proportion of anchors",
-    labels = scales::percent_format(
-      accuracy = 1
-    )
-  ) +
-  scale_colour_manual(
-    values = c(
-      "2024" = "#0868ac",
-      "2026" = "#d95f02"
-    )
-  ) +
-  labs(
-    title = "Instantaneous Calibration Drift: 2024 vs. 2026",
-    x = "Calendar days since first calibration",
-    colour = "Year",
-    linetype = "Year"
-  ) +
-  theme_minimal()
+asn_repeated <- asn_summary %>%
+  filter(anchor_count > 1)
+
+kable(asn_repeated)
 ```
 
-# 14. Notes for Interpretation
+# country freq
 
-The maximum-drift plots measure whether an anchor has **ever** departed from its initial calibration by a given amount. Consequently, these curves can only increase or remain constant.
+```{r}
+country_summary <- cleaned_persistent_90_999_both_geo %>%
+  filter(!is.na(country)) %>%
+  count(country, name = "anchor_count") %>%
+  mutate(
+    percent_of_anchors = 100 * anchor_count / sum(anchor_count)
+  ) %>%
+  arrange(desc(anchor_count), country)
 
-The instantaneous-drift plots measure how many anchors are **currently** beyond each threshold. These curves can increase or decrease as anchors move back toward their initial calibration.
+kable(country_summary)
+```
 
-A pattern in which maximum drift increases over time while instantaneous drift remains approximately stable would suggest that individual anchors experience deviations but that the overall population does not undergo a systematic accumulation of drift.
+# city freq
+```{r}
+city_summary <- cleaned_persistent_90_999_both_geo %>%
+  filter(!is.na(city)) %>%
+  count(city, name = "anchor_count") %>%
+  mutate(
+    percent_of_anchors = 100 * anchor_count / sum(anchor_count)
+  ) %>%
+  arrange(desc(anchor_count), city)
 
-The 2024 and 2026 comparisons should be interpreted using calendar time. Missing calibration dates in the 2026 dataset remain gaps in the time axis rather than being compressed into consecutive observation numbers.
+# kable(city_summary)
+
+repeated_cities <- city_summary %>%
+  filter(anchor_count > 1)
+
+kable(repeated_cities)
+```
+
+# continent freq
+
+```{r}
+continent_summary <- cleaned_persistent_90_999_both_geo %>%
+  filter(!is.na(continent)) %>%
+  count(continent, name = "anchor_count") %>%
+  mutate(
+    percent_of_anchors = 100 * anchor_count / sum(anchor_count)
+  ) %>%
+  arrange(desc(anchor_count), continent)
+
+kable(continent_summary)
+```
+
+# combined
+
+```{r}
+geographic_summary <- bind_rows(
+  cleaned_persistent_90_999_both_geo %>%
+    filter(!is.na(asn)) %>%
+    count(asn, name = "anchor_count") %>%
+    mutate(
+      geographic_level = "ASN",
+      location = as.character(asn)
+    ) %>%
+    select(geographic_level, location, anchor_count),
+
+  cleaned_persistent_90_999_both_geo %>%
+    filter(!is.na(city)) %>%
+    count(city, name = "anchor_count") %>%
+    mutate(
+      geographic_level = "City",
+      location = as.character(city)
+    ) %>%
+    select(geographic_level, location, anchor_count),
+
+  cleaned_persistent_90_999_both_geo %>%
+    filter(!is.na(country)) %>%
+    count(country, name = "anchor_count") %>%
+    mutate(
+      geographic_level = "Country",
+      location = as.character(country)
+    ) %>%
+    select(geographic_level, location, anchor_count),
+
+  cleaned_persistent_90_999_both_geo %>%
+    filter(!is.na(continent)) %>%
+    count(continent, name = "anchor_count") %>%
+    mutate(
+      geographic_level = "Continent",
+      location = as.character(continent)
+    ) %>%
+    select(geographic_level, location, anchor_count)
+) %>%
+  arrange(
+    geographic_level,
+    desc(anchor_count),
+    location
+  )
+
+kable(geographic_summary)
+```
 
 
-### One thing I'd particularly recommend
+# ASN + country +city
 
-The **last two plots** in this QMD are probably the most useful for your actual comparison. They put 2024 and 2026 on the **same percentage scale**, so the fact that you have 444 complete anchors in 2026 versus a different number in 2024 doesn't distort the comparison.
+```{r}
+geo_cluster_summary <- cleaned_persistent_90_999_both_geo %>%
+  filter(
+    !is.na(asn) |
+    !is.na(country) |
+    !is.na(city)
+  ) %>%
+  count(
+    continent,
+    country,
+    city,
+    asn,
+    name = "anchor_count"
+  ) %>%
+  arrange(desc(anchor_count))
 
-Also, this version fixes an important issue from the earlier approach: **the 2026 x-axis is based on the dates in the filenames all the way through the analysis**. If, for example, 18 calendar days were omitted, those 18 days still occupy space on the x-axis.
+kable(geo_cluster_summary)
+```
+
+That tells you which anchors repeatedly occupy the upper portion of the drift distribution, rather than simply appearing there once.
+
+```{r}
+
+
+africa_excluded <- removed_persistent_90_999_both %>%
+  mutate(
+    id = as.character(id)
+  ) %>%
+  left_join(
+    landmarks %>%
+      mutate(pid = as.character(pid)) %>%
+      select(pid, continent, country, city, asn),
+    by = c("id" = "pid")
+  ) %>%
+  filter(
+    continent == "Africa"
+  )
+
+nrow(africa_excluded)
+kable(africa_excluded)
+```
+
+```{r}
+excluded <- removed_persistent_90_999_both %>%
+  mutate(
+    id = as.character(id)
+  ) %>%
+  left_join(
+    landmarks %>%
+      mutate(pid = as.character(pid)) %>%
+      select(pid, continent, country, city, asn),
+    by = c("id" = "pid")
+  )
+
+nrow(excluded)
+kable(excluded)
+```
+
+
+# You can also identify the top 10 anchors on every day
+
+If your real goal is to investigate the anchors contributing to the upper tail of the plot, I think this is especially useful:
+
+```{r}
+top_anchors_2024 <- cooked_2024 %>%
+  group_by(days) %>%
+  arrange(desc(max.drift), .by_group = TRUE) %>%
+  slice_head(n = 10) %>%
+  ungroup() %>%
+  select(
+    days,
+    date,
+    id,
+    max.drift
+  )
+
+top_anchors_2024
+```
+
+```{r}
+top_anchors_2026 <- cooked_2026 %>%
+  group_by(days) %>%
+  arrange(desc(max.drift), .by_group = TRUE) %>%
+  slice_head(n = 10) %>%
+  ungroup() %>%
+  select(
+    days,
+    date,
+    id,
+    max.drift
+  )
+
+top_anchors_2026
+```
+
+
+
+# Even better: label those anchors on the plot
+
+If you want to visually see which anchors are producing the 90–99.9% region, we can add their IDs to the plot. I would not label every qualifying anchor, because with hundreds of observations it will become unreadable.
+
+Instead, we could label, for example, the top 10 anchors at the final day, or the anchors that are in the 90–99.9% region for the greatest proportion of the experiment.
+
+<!-- ```{r} -->
+<!-- labels_2026 <- persistent_90_999_2026 %>% -->
+<!--   slice_head(n = 10) %>% -->
+<!--   left_join( -->
+<!--     cooked_2026, -->
+<!--     by = "id" -->
+<!--   ) -->
+<!-- ``` -->
+
+
+<!-- # 9. Instantaneous Drift -->
+
+<!-- ## 9.1 2024 -->
+
+<!-- ```{r} -->
+<!-- ggplot( -->
+<!--   cooked_2024, -->
+<!--   aes( -->
+<!--     x = days, -->
+<!--     y = drift, -->
+<!--     colour = id, -->
+<!--     group = id -->
+<!--   ) -->
+<!-- ) + -->
+<!--   geom_step( -->
+<!--     alpha = 0.06, -->
+<!--     linewidth = 0.4 -->
+<!--   ) + -->
+<!--   guides(color = "none") + -->
+<!--   labs( -->
+<!--     title = "2024 Instantaneous Calibration Drift", -->
+<!--     x = "Calendar days since first calibration", -->
+<!--     y = "Deviation from Day 0" -->
+<!--   ) + -->
+<!--   scale_y_continuous( -->
+<!--     labels = scales::percent_format( -->
+<!--       accuracy = 1 -->
+<!--     ) -->
+<!--   ) + -->
+<!--   theme_minimal() -->
+<!-- ``` -->
+
+<!-- ## 9.2 2026 -->
+
+<!-- ```{r} -->
+<!-- ggplot( -->
+<!--   cooked_2026, -->
+<!--   aes( -->
+<!--     x = days, -->
+<!--     y = drift, -->
+<!--     colour = id, -->
+<!--     group = id -->
+<!--   ) -->
+<!-- ) + -->
+<!--   geom_step( -->
+<!--     alpha = 0.06, -->
+<!--     linewidth = 0.4 -->
+<!--   ) + -->
+<!--   guides(color = "none") + -->
+<!--   labs( -->
+<!--     title = "2026 Instantaneous Calibration Drift", -->
+<!--     x = "Calendar days since first calibration", -->
+<!--     y = "Deviation from Day 0" -->
+<!--   ) + -->
+<!--   scale_y_continuous( -->
+<!--     labels = scales::percent_format( -->
+<!--       accuracy = 1 -->
+<!--     ) -->
+<!--   ) + -->
+<!--   theme_minimal() -->
+<!-- ``` -->
+
+<!-- \newpage -->
+
+<!-- # 10. Maximum Drift Threshold Analysis -->
+
+<!-- The thresholds are the same as those used in Zach's analysis: -->
+
+<!-- * 1% -->
+<!-- * 2% -->
+<!-- * 5% -->
+<!-- * 10% -->
+<!-- * 20% -->
+
+<!-- ```{r} -->
+<!-- thresholds <- c( -->
+<!--   0.01, -->
+<!--   0.02, -->
+<!--   0.05, -->
+<!--   0.10, -->
+<!--   0.20 -->
+<!-- ) -->
+
+<!-- thresholds.pct <- c( -->
+<!--   "1%", -->
+<!--   "2%", -->
+<!--   "5%", -->
+<!--   "10%", -->
+<!--   "20%" -->
+<!-- ) -->
+<!-- ``` -->
+
+<!-- ## 10.1 2024 -->
+
+<!-- ```{r} -->
+<!-- drift.proportion_2024 <- ( -->
+<!--   crossing( -->
+<!--     cooked_2024, -->
+<!--     threshold = thresholds -->
+<!--   ) -->
+<!--   |> group_by( -->
+<!--     threshold, -->
+<!--     days -->
+<!--   ) -->
+<!--   |> summarise( -->
+<!--     drifted.above = sum( -->
+<!--       max.drift > threshold -->
+<!--     ), -->
+<!--     .groups = "drop" -->
+<!--   ) -->
+<!--   |> mutate( -->
+<!--     threshold = ordered( -->
+<!--       threshold, -->
+<!--       levels = thresholds, -->
+<!--       labels = thresholds.pct -->
+<!--     ) -->
+<!--   ) -->
+<!-- ) -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- ggplot( -->
+<!--   drift.proportion_2024, -->
+<!--   aes( -->
+<!--     x = days, -->
+<!--     y = drifted.above, -->
+<!--     colour = threshold, -->
+<!--     group = threshold -->
+<!--   ) -->
+<!-- ) + -->
+<!--   geom_step(linewidth = 1) + -->
+<!--   scale_x_continuous( -->
+<!--     "Calendar days since first calibration", -->
+<!--     limits = c( -->
+<!--       0, -->
+<!--       max(cooked_2024$days) -->
+<!--     ), -->
+<!--     breaks = seq( -->
+<!--       0, -->
+<!--       max(cooked_2024$days), -->
+<!--       by = 7 -->
+<!--     ) -->
+<!--   ) + -->
+<!--   scale_y_continuous( -->
+<!--     "# anchors drifted past threshold", -->
+<!--     limits = c( -->
+<!--       0, -->
+<!--       n_distinct(cooked_2024$id) -->
+<!--     ) -->
+<!--   ) + -->
+<!--   scale_colour_manual( -->
+<!--     "Threshold", -->
+<!--     values = c( -->
+<!--       "1%" = "#0868ac", -->
+<!--       "2%" = "#43a2ca", -->
+<!--       "5%" = "#7bccc4", -->
+<!--       "10%" = "#8c96c6", -->
+<!--       "20%" = "#8856a7" -->
+<!--     ) -->
+<!--   ) + -->
+<!--   labs( -->
+<!--     title = "2024: Anchors Ever Exceeding Drift Threshold" -->
+<!--   ) + -->
+<!--   theme_minimal() -->
+<!-- ``` -->
+
+<!-- ## 10.2 2026 -->
+
+<!-- ```{r} -->
+<!-- drift.proportion_2026 <- ( -->
+<!--   crossing( -->
+<!--     cooked_2026, -->
+<!--     threshold = thresholds -->
+<!--   ) -->
+<!--   |> group_by( -->
+<!--     threshold, -->
+<!--     days -->
+<!--   ) -->
+<!--   |> summarise( -->
+<!--     drifted.above = sum( -->
+<!--       max.drift > threshold -->
+<!--     ), -->
+<!--     .groups = "drop" -->
+<!--   ) -->
+<!--   |> mutate( -->
+<!--     threshold = ordered( -->
+<!--       threshold, -->
+<!--       levels = thresholds, -->
+<!--       labels = thresholds.pct -->
+<!--     ) -->
+<!--   ) -->
+<!-- ) -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- ggplot( -->
+<!--   drift.proportion_2026, -->
+<!--   aes( -->
+<!--     x = days, -->
+<!--     y = drifted.above, -->
+<!--     colour = threshold, -->
+<!--     group = threshold -->
+<!--   ) -->
+<!-- ) + -->
+<!--   geom_step(linewidth = 1) + -->
+<!--   scale_x_continuous( -->
+<!--     "Calendar days since first calibration", -->
+<!--     limits = c( -->
+<!--       0, -->
+<!--       max(cooked_2026$days) -->
+<!--     ), -->
+<!--     breaks = seq( -->
+<!--       0, -->
+<!--       max(cooked_2026$days), -->
+<!--       by = 7 -->
+<!--     ) -->
+<!--   ) + -->
+<!--   scale_y_continuous( -->
+<!--     "# anchors drifted past threshold", -->
+<!--     limits = c( -->
+<!--       0, -->
+<!--       n_distinct(cooked_2026$id) -->
+<!--     ) -->
+<!--   ) + -->
+<!--   scale_colour_manual( -->
+<!--     "Threshold", -->
+<!--     values = c( -->
+<!--       "1%" = "#0868ac", -->
+<!--       "2%" = "#43a2ca", -->
+<!--       "5%" = "#7bccc4", -->
+<!--       "10%" = "#8c96c6", -->
+<!--       "20%" = "#8856a7" -->
+<!--     ) -->
+<!--   ) + -->
+<!--   labs( -->
+<!--     title = "2026: Anchors Ever Exceeding Drift Threshold" -->
+<!--   ) + -->
+<!--   theme_minimal() -->
+<!-- ``` -->
+
+<!-- # 11. Instantaneous Drift Threshold Analysis -->
+
+<!-- This analysis counts the number of anchors that are currently beyond each threshold, rather than the number that have ever exceeded it. -->
+
+<!-- ## 11.1 2024 -->
+
+<!-- ```{r} -->
+<!-- drift.proportion.2_2024 <- ( -->
+<!--   crossing( -->
+<!--     cooked_2024, -->
+<!--     threshold = thresholds -->
+<!--   ) -->
+<!--   |> group_by( -->
+<!--     threshold, -->
+<!--     days -->
+<!--   ) -->
+<!--   |> summarise( -->
+<!--     drifted.above = sum( -->
+<!--       drift > threshold -->
+<!--     ), -->
+<!--     .groups = "drop" -->
+<!--   ) -->
+<!--   |> mutate( -->
+<!--     threshold = ordered( -->
+<!--       threshold, -->
+<!--       levels = thresholds, -->
+<!--       labels = thresholds.pct -->
+<!--     ) -->
+<!--   ) -->
+<!-- ) -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- ggplot( -->
+<!--   drift.proportion.2_2024, -->
+<!--   aes( -->
+<!--     x = days, -->
+<!--     y = drifted.above, -->
+<!--     colour = threshold, -->
+<!--     group = threshold -->
+<!--   ) -->
+<!-- ) + -->
+<!--   geom_step(linewidth = 1) + -->
+<!--   scale_x_continuous( -->
+<!--     "Calendar days since first calibration", -->
+<!--     limits = c( -->
+<!--       0, -->
+<!--       max(cooked_2024$days) -->
+<!--     ), -->
+<!--     breaks = seq( -->
+<!--       0, -->
+<!--       max(cooked_2024$days), -->
+<!--       by = 7 -->
+<!--     ) -->
+<!--   ) + -->
+<!--   scale_y_continuous( -->
+<!--     "# anchors currently past threshold", -->
+<!--     limits = c( -->
+<!--       0, -->
+<!--       n_distinct(cooked_2024$id) -->
+<!--     ) -->
+<!--   ) + -->
+<!--   scale_colour_manual( -->
+<!--     "Threshold", -->
+<!--     values = c( -->
+<!--       "1%" = "#0868ac", -->
+<!--       "2%" = "#43a2ca", -->
+<!--       "5%" = "#7bccc4", -->
+<!--       "10%" = "#8c96c6", -->
+<!--       "20%" = "#8856a7" -->
+<!--     ) -->
+<!--   ) + -->
+<!--   labs( -->
+<!--     title = "2024: Anchors Currently Exceeding Drift Threshold" -->
+<!--   ) + -->
+<!--   theme_minimal() -->
+<!-- ``` -->
+
+<!-- ## 11.2 2026 -->
+
+<!-- ```{r} -->
+<!-- drift.proportion.2_2026 <- ( -->
+<!--   crossing( -->
+<!--     cooked_2026, -->
+<!--     threshold = thresholds -->
+<!--   ) -->
+<!--   |> group_by( -->
+<!--     threshold, -->
+<!--     days -->
+<!--   ) -->
+<!--   |> summarise( -->
+<!--     drifted.above = sum( -->
+<!--       drift > threshold -->
+<!--     ), -->
+<!--     .groups = "drop" -->
+<!--   ) -->
+<!--   |> mutate( -->
+<!--     threshold = ordered( -->
+<!--       threshold, -->
+<!--       levels = thresholds, -->
+<!--       labels = thresholds.pct -->
+<!--     ) -->
+<!--   ) -->
+<!-- ) -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- ggplot( -->
+<!--   drift.proportion.2_2026, -->
+<!--   aes( -->
+<!--     x = days, -->
+<!--     y = drifted.above, -->
+<!--     colour = threshold, -->
+<!--     group = threshold -->
+<!--   ) -->
+<!-- ) + -->
+<!--   geom_step(linewidth = 1) + -->
+<!--   scale_x_continuous( -->
+<!--     "Calendar days since first calibration", -->
+<!--     limits = c( -->
+<!--       0, -->
+<!--       max(cooked_2026$days) -->
+<!--     ), -->
+<!--     breaks = seq( -->
+<!--       0, -->
+<!--       max(cooked_2026$days), -->
+<!--       by = 7 -->
+<!--     ) -->
+<!--   ) + -->
+<!--   scale_y_continuous( -->
+<!--     "# anchors currently past threshold", -->
+<!--     limits = c( -->
+<!--       0, -->
+<!--       n_distinct(cooked_2026$id) -->
+<!--     ) -->
+<!--   ) + -->
+<!--   scale_colour_manual( -->
+<!--     "Threshold", -->
+<!--     values = c( -->
+<!--       "1%" = "#0868ac", -->
+<!--       "2%" = "#43a2ca", -->
+<!--       "5%" = "#7bccc4", -->
+<!--       "10%" = "#8c96c6", -->
+<!--       "20%" = "#8856a7" -->
+<!--     ) -->
+<!--   ) + -->
+<!--   labs( -->
+<!--     title = "2026: Anchors Currently Exceeding Drift Threshold" -->
+<!--   ) + -->
+<!--   theme_minimal() -->
+<!-- ``` -->
+
+<!-- \newpage -->
+
+<!-- # 12. Direct 2024 vs. 2026 Comparison -->
+
+<!-- For direct comparison, it is useful to put both years onto the same plot. -->
+
+<!-- Because the datasets contain different numbers of anchors, percentages are more informative than raw counts. -->
+
+<!-- ## 12.1 Maximum Drift: Percentage of Anchors -->
+
+<!-- ```{r} -->
+<!-- max_drift_comparison <- bind_rows( -->
+
+<!--   cooked_2024 %>% -->
+<!--     group_by(days) %>% -->
+<!--     summarise( -->
+<!--       anchors = n_distinct(id), -->
+<!--       .groups = "drop" -->
+<!--     ), -->
+
+<!--   cooked_2026 %>% -->
+<!--     group_by(days) %>% -->
+<!--     summarise( -->
+<!--       anchors = n_distinct(id), -->
+<!--       .groups = "drop" -->
+<!--     ) -->
+<!-- ) -->
+<!-- ``` -->
+
+<!-- For the threshold comparison: -->
+
+<!-- ```{r} -->
+<!-- max_threshold_comparison <- bind_rows( -->
+
+<!--   crossing( -->
+<!--     cooked_2024, -->
+<!--     threshold = thresholds -->
+<!--   ) %>% -->
+<!--     group_by( -->
+<!--       days, -->
+<!--       threshold -->
+<!--     ) %>% -->
+<!--     summarise( -->
+<!--       drifted.above = sum( -->
+<!--         max.drift > threshold -->
+<!--       ), -->
+<!--       total = n_distinct(id), -->
+<!--       .groups = "drop" -->
+<!--     ) %>% -->
+<!--     mutate( -->
+<!--       year = "2024", -->
+<!--       proportion = drifted.above / total -->
+<!--     ), -->
+
+<!--   crossing( -->
+<!--     cooked_2026, -->
+<!--     threshold = thresholds -->
+<!--   ) %>% -->
+<!--     group_by( -->
+<!--       days, -->
+<!--       threshold -->
+<!--     ) %>% -->
+<!--     summarise( -->
+<!--       drifted.above = sum( -->
+<!--         max.drift > threshold -->
+<!--       ), -->
+<!--       total = n_distinct(id), -->
+<!--       .groups = "drop" -->
+<!--     ) %>% -->
+<!--     mutate( -->
+<!--       year = "2026", -->
+<!--       proportion = drifted.above / total -->
+<!--     ) -->
+<!-- ) %>% -->
+<!--   mutate( -->
+<!--     threshold = factor( -->
+<!--       threshold, -->
+<!--       levels = thresholds, -->
+<!--       labels = thresholds.pct -->
+<!--     ) -->
+<!--   ) -->
+<!-- ``` -->
+
+<!-- Plot: -->
+
+<!-- ```{r} -->
+<!-- ggplot( -->
+<!--   max_threshold_comparison, -->
+<!--   aes( -->
+<!--     x = days, -->
+<!--     y = proportion, -->
+<!--     colour = year, -->
+<!--     linetype = year -->
+<!--   ) -->
+<!-- ) + -->
+<!--   geom_step(linewidth = 1) + -->
+<!--   facet_wrap( -->
+<!--     ~ threshold, -->
+<!--     ncol = 1 -->
+<!--   ) + -->
+<!--   scale_y_continuous( -->
+<!--     "Proportion of anchors", -->
+<!--     labels = scales::percent_format( -->
+<!--       accuracy = 1 -->
+<!--     ) -->
+<!--   ) + -->
+<!--   scale_colour_manual( -->
+<!--     values = c( -->
+<!--       "2024" = "#0868ac", -->
+<!--       "2026" = "#d95f02" -->
+<!--     ) -->
+<!--   ) + -->
+<!--   labs( -->
+<!--     title = "Maximum Calibration Drift: 2024 vs. 2026", -->
+<!--     x = "Calendar days since first calibration", -->
+<!--     colour = "Year", -->
+<!--     linetype = "Year" -->
+<!--   ) + -->
+<!--   theme_minimal() -->
+<!-- ``` -->
+
+<!-- # 13. Instantaneous Drift: Percentage of Anchors -->
+
+<!-- ```{r} -->
+<!-- instantaneous_threshold_comparison <- bind_rows( -->
+
+<!--   crossing( -->
+<!--     cooked_2024, -->
+<!--     threshold = thresholds -->
+<!--   ) %>% -->
+<!--     group_by( -->
+<!--       days, -->
+<!--       threshold -->
+<!--     ) %>% -->
+<!--     summarise( -->
+<!--       drifted.above = sum( -->
+<!--         drift > threshold -->
+<!--       ), -->
+<!--       total = n_distinct(id), -->
+<!--       .groups = "drop" -->
+<!--     ) %>% -->
+<!--     mutate( -->
+<!--       year = "2024", -->
+<!--       proportion = drifted.above / total -->
+<!--     ), -->
+
+<!--   crossing( -->
+<!--     cooked_2026, -->
+<!--     threshold = thresholds -->
+<!--   ) %>% -->
+<!--     group_by( -->
+<!--       days, -->
+<!--       threshold -->
+<!--     ) %>% -->
+<!--     summarise( -->
+<!--       drifted.above = sum( -->
+<!--         drift > threshold -->
+<!--       ), -->
+<!--       total = n_distinct(id), -->
+<!--       .groups = "drop" -->
+<!--     ) %>% -->
+<!--     mutate( -->
+<!--       year = "2026", -->
+<!--       proportion = drifted.above / total -->
+<!--     ) -->
+<!-- ) %>% -->
+<!--   mutate( -->
+<!--     threshold = factor( -->
+<!--       threshold, -->
+<!--       levels = thresholds, -->
+<!--       labels = thresholds.pct -->
+<!--     ) -->
+<!--   ) -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- ggplot( -->
+<!--   instantaneous_threshold_comparison, -->
+<!--   aes( -->
+<!--     x = days, -->
+<!--     y = proportion, -->
+<!--     colour = year, -->
+<!--     linetype = year -->
+<!--   ) -->
+<!-- ) + -->
+<!--   geom_step(linewidth = 1) + -->
+<!--   facet_wrap( -->
+<!--     ~ threshold, -->
+<!--     ncol = 1 -->
+<!--   ) + -->
+<!--   scale_y_continuous( -->
+<!--     "Proportion of anchors", -->
+<!--     labels = scales::percent_format( -->
+<!--       accuracy = 1 -->
+<!--     ) -->
+<!--   ) + -->
+<!--   scale_colour_manual( -->
+<!--     values = c( -->
+<!--       "2024" = "#0868ac", -->
+<!--       "2026" = "#d95f02" -->
+<!--     ) -->
+<!--   ) + -->
+<!--   labs( -->
+<!--     title = "Instantaneous Calibration Drift: 2024 vs. 2026", -->
+<!--     x = "Calendar days since first calibration", -->
+<!--     colour = "Year", -->
+<!--     linetype = "Year" -->
+<!--   ) + -->
+<!--   theme_minimal() -->
+<!-- ``` -->
+
+<!-- # 14. Notes for Interpretation -->
+
+<!-- The maximum-drift plots measure whether an anchor has **ever** departed from its initial calibration by a given amount. Consequently, these curves can only increase or remain constant. -->
+
+<!-- The instantaneous-drift plots measure how many anchors are **currently** beyond each threshold. These curves can increase or decrease as anchors move back toward their initial calibration. -->
+
+<!-- A pattern in which maximum drift increases over time while instantaneous drift remains approximately stable would suggest that individual anchors experience deviations but that the overall population does not undergo a systematic accumulation of drift. -->
+
+<!-- The 2024 and 2026 comparisons should be interpreted using calendar time. Missing calibration dates in the 2026 dataset remain gaps in the time axis rather than being compressed into consecutive observation numbers. -->
+
+
+<!-- ### One thing I'd particularly recommend -->
+
+<!-- The **last two plots** in this QMD are probably the most useful for your actual comparison. They put 2024 and 2026 on the **same percentage scale**, so the fact that you have 444 complete anchors in 2026 versus a different number in 2024 doesn't distort the comparison. -->
+
+<!-- Also, this version fixes an important issue from the earlier approach: **the 2026 x-axis is based on the dates in the filenames all the way through the analysis**. If, for example, 18 calendar days were omitted, those 18 days still occupy space on the x-axis. -->
 

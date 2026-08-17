@@ -259,6 +259,38 @@ ggplot(
 ```
 The mean value exceeds the third quartile line once a greater number of anchors demonstrate a sudden jump in calibration rate. The first and third quartile values, and therefore the median value, stay relatively consistent across all 80 days. This demonstrates that while there is a proportion of anchors that deviate from their "ground truth" calibration behavior, that perhaps the ratio of deviating anchors to stable anchors can be assumed to be consistent. 
 
+```{r}
+# ============================================================
+# 2.1 Comparable drift analysis for 2026 calibration data
+# ============================================================
+
+library(tidyverse)
+library(cowplot)
+
+# Convert your 2026 data to the same conceptual structure
+# as Zach's 2024 "raw" data.
+cooked <- long_df %>%
+  rename(
+    id = ID,
+    calibration = value,
+    days = day
+  ) %>%
+  filter(calibration > 0) %>%
+  group_by(id) %>%
+  arrange(days, .by_group = TRUE) %>%
+  mutate(
+    # Absolute proportional deviation from each anchor's
+    # calibration on its first available day
+    drift = abs(calibration - first(calibration)) /
+            first(calibration),
+
+    # Maximum drift observed up to each day
+    max.drift = cummax(drift)
+  ) %>%
+  ungroup()
+```
+
+
 ## 2.1.1 Zach's Calibration Analysis (2024 data)
 
 This aligns with Zach's analysis of the calibration data from March of 2025. In some visualizations Zach sent over to me and Katie over discord, Zach visualizes instantaneous drift from calibration on day 0 over a period of 29 days. The data is from Katie's calibration retrieval between October 21st and November 18th, 2024. It is replicated below:
@@ -430,6 +462,237 @@ ggplot(drift.proportion.2,
 ### 2.1.3 Adding on to Zach's Analysis
 
 The spaghetti plot from 2.1 that visualizes January 16 to April 14 2026 data and the behaviors of the quartiles demonstrate a similar behavior to Zach's analysis of October 21 to November 18 2024 calibration data. While the 2026 data points span 80 days in comparison to the 29 days of 2024 data, the same conclusions can be made about calibration deviation behavior. 
+
+# Analogous to Zach's first plot with 2026 data
+```{r}
+ggplot(
+  cooked,
+  aes(
+    x = days,
+    y = max.drift,
+    colour = id,
+    group = id
+  )
+) +
+  geom_step(alpha = 0.5) +
+  guides(color = "none") +
+  labs(
+    x = "Days",
+    y = "Maximum deviation from Day 1"
+  ) +
+  scale_y_continuous(
+    labels = scales::percent_format(accuracy = 1)
+  ) +
+  theme_minimal()
+```
+
+```{r}
+ggplot(cooked, aes(
+  x = days,
+  y = max.drift,
+  colour = id,
+  group = id
+)) +
+  geom_step(alpha = 0.5) +
+  guides(color = "none") +
+  scale_x_continuous(
+    "Days",
+    limits = c(1, 80),
+    breaks = seq(0, 80, by = 10)
+  ) +
+  scale_y_continuous(
+    "Maximum deviation from Day 1",
+    labels = scales::percent_format(accuracy = 1)
+  ) +
+  theme_minimal()
+```
+# second plot analogous
+
+```{r}
+ggplot(
+  cooked,
+  aes(
+    x = days,
+    y = drift,
+    colour = id,
+    group = id
+  )
+) +
+  geom_step(alpha = 0.5) +
+  guides(color = "none") +
+  labs(
+    x = "Days",
+    y = "Instantaneous deviation from Day 1"
+  ) +
+  scale_y_continuous(
+    labels = scales::percent_format(accuracy = 1)
+  ) +
+  scale_x_continuous(
+    breaks = seq(0, 80, by = 10)
+  ) +
+  theme_minimal()
+```
+
+# threshold plot
+
+```{r}
+thresholds <- c(0.01, 0.02, 0.05, 0.10, 0.20)
+
+thresholds.pct <- c(
+  "1%", "2%", "5%", "10%", "20%"
+)
+
+drift.proportion <- crossing(
+  cooked,
+  threshold = thresholds
+) %>%
+  group_by(threshold, days) %>%
+  summarise(
+    drifted.above = sum(max.drift > threshold),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    threshold = ordered(
+      threshold,
+      levels = thresholds,
+      labels = thresholds.pct
+    )
+  )
+```
+
+```{r}
+ggplot(
+  drift.proportion,
+  aes(
+    x = days,
+    y = drifted.above,
+    colour = threshold,
+    group = threshold
+  )
+) +
+  geom_step(linewidth = 1) +
+  scale_x_continuous(
+    "Days",
+    limits = c(1, 80),
+    breaks = seq(0, 80, by = 10)
+  ) +
+  scale_y_continuous(
+    "# anchors drifted past threshold",
+    limits = c(0, 444),
+    breaks = seq(0, 444, by = 100)
+  ) +
+  scale_colour_manual(
+    "Threshold",
+    values = c(
+      "1%"  = "#0868ac",
+      "2%"  = "#43a2ca",
+      "5%"  = "#7bccc4",
+      "10%" = "#8c96c6",
+      "20%" = "#8856a7"
+    )
+  ) +
+  theme_minimal()
+```
+
+#instantaneous threshold plot
+```{r}
+drift.proportion.2 <- crossing(
+  cooked,
+  threshold = thresholds
+) %>%
+  group_by(threshold, days) %>%
+  summarise(
+    drifted.above = sum(drift > threshold),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    threshold = ordered(
+      threshold,
+      levels = thresholds,
+      labels = thresholds.pct
+    )
+  )
+```
+
+```{r}
+ggplot(
+  drift.proportion.2,
+  aes(
+    x = days,
+    y = drifted.above,
+    colour = threshold,
+    group = threshold
+  )
+) +
+  geom_step(linewidth = 1) +
+  scale_x_continuous(
+    "Days",
+    limits = c(1, 80),
+    breaks = seq(0, 80, by = 10)
+  ) +
+  scale_y_continuous(
+    "# anchors currently past threshold",
+    limits = c(0, 444),
+    breaks = seq(0, 444, by = 100)
+  ) +
+  scale_colour_manual(
+    "Threshold",
+    values = c(
+      "1%"  = "#0868ac",
+      "2%"  = "#43a2ca",
+      "5%"  = "#7bccc4",
+      "10%" = "#8c96c6",
+      "20%" = "#8856a7"
+    )
+  ) +
+  theme_minimal()
+```
+# Day 1 as permanent reference point for 2026 data, so use of ADF box ljung is good
+# Normalized verison of the threshold plot
+```{r}
+drift.proportion_pct <- drift.proportion %>%
+  mutate(
+    proportion = drifted.above / n_distinct(cooked$id)
+  )
+```
+
+```{r}
+ggplot(
+  drift.proportion_pct,
+  aes(
+    x = days,
+    y = proportion,
+    colour = threshold,
+    group = threshold
+  )
+) +
+  geom_step(linewidth = 1) +
+  scale_x_continuous(
+    "Days",
+    limits = c(1, 80),
+    breaks = seq(0, 80, by = 10)
+  ) +
+  scale_y_continuous(
+    "% of anchors beyond threshold",
+    labels = scales::percent_format(accuracy = 1)
+  ) +
+  scale_colour_manual(
+    "Threshold",
+    values = c(
+      "1%"  = "#0868ac",
+      "2%"  = "#43a2ca",
+      "5%"  = "#7bccc4",
+      "10%" = "#8c96c6",
+      "20%" = "#8856a7"
+    )
+  ) +
+  theme_minimal()
+```
+This lets you say things like:
+
+"After 30 days, approximately 70% of anchors had experienced at least one 1% deviation from their initial calibration."
+
+rather than tying the result specifically to a sample of 444 anchors.
 
 ## 2.2 Feature Extraction
 
