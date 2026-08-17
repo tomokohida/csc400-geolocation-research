@@ -1,0 +1,2945 @@
+---
+title: "Calibration Report 08-17-26"
+format: pdf
+editor: visual
+---
+```{r, echo=FALSE}
+knitr::opts_chunk$set(
+  warning = FALSE,
+  message = FALSE,
+  echo = FALSE#,
+  #include = FALSE
+)
+```
+
+# Overview
+
+This report analyzes longitudinal calibration data to understand the typical,
+variable, stationary, and nonstationary behavior of calibration series.
+
+The overall workflow is:
+
+1. Setup: Load and clean the calibration data
+2. Exploratory Data Analysis: Extract statistical features and compare similarity using K-means, correlation, and greedy selection
+3. Stationarity Testing: Identify stationarity trends and visualize volatile series across geographic region
+4. Change Point Analysis: Identify change points on nonstationary series
+5. Geographic Representation: Effect of Methodology on Calibration  Sample
+6. White Noise and Stationary Classification using Ljung-Box and Augumented Dickey-Fuller Tests
+7. Applying Moving Average Smoothing for "Ground Truth"
+8. Interpretation: Determining a Calibration Threshold
+9. Next Steps
+
+\newpage
+
+# 1. Setup
+
+## 1.1 Data Loading
+
+Loads required R packages, imports the geographic landmark metadata, and reads calibration CSV files containing daily calibration rates from all anchors between January 6th, 2026 and April 14th, 2026.
+
+```{r}
+library(readr)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(tseries)
+library(utils)
+library(changepoint)
+library(zoo)
+```
+
+```{r}
+# Load landmark metadata
+landmarks <- read.csv("landmarks.csv")
+
+landmarks_subset <- landmarks %>%
+  select(pid, city, country, asn, continent) %>%
+  mutate(pid = as.character(pid)) %>%
+  rename(ID = pid)
+
+# Load all calibration CSV files
+files <- list.files(
+  "26_Calibration",
+  pattern = "\\.csv$",
+  full.names = TRUE
+) %>%
+  sort()
+
+df_list <- lapply(files, read.csv)
+names(df_list) <- paste0("df", seq_along(df_list))
+
+# Remove files with fewer than 500 observations, if calibration df contains less than 500 rows, it is missing half of the total anchors' calibration data
+df_list <- df_list[
+  sapply(df_list, function(x) !is.null(x) && nrow(x) >= 500)
+]
+```
+
+## 1.2 Cleaning Function
+
+The calibration files contain anchor ID and calibration rate information in slope "m" and intercept "b" values. The cleaning function reallocates the automatically read-in column names as the first row, separates the second column into slope and intercept columns, and combines the two numeric components into a single calibration value by using the $y=mx+b$ equation with an arbitrary $x=100$. The resulting col4 variable is $y$, the calibration value used throughout the remainder of the analysis.
+
+```{r}
+clean_df <- function(df) {
+
+  stopifnot(ncol(df) >= 2)
+
+  # Preserve original column names as a data row
+  new_row <- as.data.frame(
+    t(colnames(df)),
+    stringsAsFactors = FALSE
+  )
+
+  colnames(new_row) <- colnames(df)
+  df <- rbind(new_row, df)
+
+  # Remove leading character from first two fields
+  df[1, 1:2] <- sub("^.", "", df[1, 1:2])
+
+  # Standardize column names
+  df <- df %>%
+    rename(
+      col1 = 1,
+      col2 = 2
+    )
+
+  # Split the second field
+  df <- separate(
+    df,
+    col2,
+    into = c("col2", "col3"),
+    sep = "b",
+    fill = "right"
+  )
+
+  # Convert fields to numeric
+  df$col1 <- suppressWarnings(as.numeric(df$col1))
+
+  df$col2 <- suppressWarnings(
+    as.numeric(gsub("[^0-9.-]", "", df$col2))
+  )
+
+  df$col3 <- suppressWarnings(
+    as.numeric(gsub("[^0-9.-]", "", df$col3))
+  )
+
+  # Construct calibration value
+  df$col4 <- df$col2 * 100 + df$col3
+
+  df
+}
+```
+
+```{r}
+df_list <- lapply(df_list, clean_df)
+```
+
+### 1.2.1 Keep IDs Common Across Calibration Files
+
+Not every calibration ID necessarily appears in every file. To choose a sample of anchors that are sufficiently represented across daily measurements, an anchor is retained when its ID appears in at least 80% of the available files. This reduces the likelihood that missing observations dominate time series analysis and across-anchor behavior. 900 of 961 of anchors are retained.
+
+```{r}
+col1_list <- lapply(df_list, function(df) df$col1)
+
+id_counts <- table(unlist(col1_list))
+
+threshold <- length(df_list) * 0.8
+
+common_vals <- names(
+  id_counts[id_counts >= threshold]
+)
+
+df_list <- lapply(
+  df_list,
+  function(df) df[df$col1 %in% common_vals, ]
+)
+```
+
+### 1.2.2 Build the Longitudinal Calibration Dataset
+
+The calibration CSVs are reduced to anchor ID and daily calibration values, with rows corresponding to calibration IDs and columns corresponding to days. There are 98 days of sequential calibration data, but due to days with large volumes of missing data, 18 days were omitted. Namely, a dozen days of calibration data were omitted from the beginning of January, and the remaining days were omitted between January 30th and April 14th, the final day of calibration data collection. Years worth of daily data would be ideal for this study, but we introduce our first calibration rate observations with a three month period. Among the 900 anchor IDs that appeared in at least 80% of our data, only IDs without missing values across all 80 remaining days are retained, leaving 444 of 900 anchor IDs for analysis. The wide calibration dataset is converted to long format so that each row represents one ID-day observation, and so that only one dataframe must be read in for plotting visualizations. Geographic landmark information is then joined to each calibration series–allowing later analyses to examine calibration behavior by continent, country, or ASN.
+
+```{r}
+dfs_subset <- lapply(
+  df_list,
+  function(d) d[, c("col1", "col4")]
+)
+
+dfs_subset <- Map(
+  function(d, i) {
+    colnames(d) <- c("ID", paste0("day", i))
+    d
+  },
+  dfs_subset,
+  seq_along(dfs_subset)
+)
+```
+
+```{r}
+result <- Reduce(
+  function(x, y) {
+    merge(x, y, by = "ID", all = TRUE)
+  },
+  dfs_subset
+)
+
+complete_df <- result[
+  complete.cases(result[, -1]),
+]
+```
+
+```{r}
+complete_df$ID <- as.character(complete_df$ID)
+
+wide_mat <- as.matrix(
+  complete_df[, -1]
+)
+
+rownames(wide_mat) <- complete_df$ID
+```
+
+```{r}
+long_df <- complete_df %>%
+  pivot_longer(
+    -ID,
+    names_to = "day",
+    values_to = "value"
+  )
+
+long_df$day <- as.numeric(
+  gsub("day", "", long_df$day)
+)
+
+long_df_geo <- long_df %>%
+  left_join(
+    landmarks_subset,
+    by = "ID"
+  )
+```
+\newpage
+
+# 2. Exploratory Data Analysis
+
+## 2.1 Overall Calibration Behavior (Spaghetti Plot)
+
+The first visualization shows all calibration trajectories simultaneously. The individual series are shown with low opacity so that the overall population pattern can be seen. The red line represents the mean calibration value at each time point, the green represents the first quartile, and the yellow represents the third quartile.
+
+```{r}
+ggplot(
+  long_df,
+  aes(day, log10(value), group = ID)
+) +
+  geom_line(alpha = 0.1) +
+
+  # 1st quartile (Q1)
+  stat_summary(
+    aes(group = 1),
+    fun = \(x) quantile(x, 0.25, na.rm = TRUE),
+    geom = "line",
+    color = "green",
+    linewidth = 0.25
+  ) +
+
+  # Mean
+  stat_summary(
+    aes(group = 1),
+    fun = mean,
+    geom = "line",
+    color = "red",
+    linewidth = 0.3
+  ) +
+
+  # 3rd quartile (Q3)
+  stat_summary(
+    aes(group = 1),
+    fun = \(x) quantile(x, 0.75, na.rm = TRUE),
+    geom = "line",
+    color = "yellow",
+    linewidth = 0.25
+  )
+```
+The mean value exceeds the third quartile line once a greater number of anchors demonstrate a sudden jump in calibration rate. The first and third quartile values, and therefore the median value, stay relatively consistent across all 80 days. This demonstrates that while there is a proportion of anchors that deviate from their "ground truth" calibration behavior, that perhaps the ratio of deviating anchors to stable anchors can be assumed to be consistent. 
+
+## 2.1.1 Zach's Calibration Analysis (2024 data)
+
+This aligns with Zach's analysis of the calibration data from March of 2025. In some visualizations Zach sent over to me and Katie over discord, Zach visualizes instantaneous drift from calibration on day 0 over a period of 29 days. The data is from Katie's calibration retrieval between October 21st and November 18th, 2024. It is replicated below:
+
+```{r}
+suppressPackageStartupMessages({
+  library(tidyverse)
+})
+
+# Find all calibration CSV files
+files <- list.files(
+  "calibration_outputs",
+  pattern = "^calibrations_probeData_2024-\\d{2}-\\d{2}\\.csv$",
+  full.names = TRUE
+)
+
+# Read and combine all files
+raw <- map_dfr(files, function(file) {
+
+  # Extract date from filename
+  file_date <- str_extract(
+    basename(file),
+    "\\d{4}-\\d{2}-\\d{2}"
+  )
+
+  # Read CSV WITHOUT treating first row as column names
+  dat <- read_csv(
+    file,
+    col_names = FALSE,
+    col_types = cols(
+      X1 = col_character(),
+      X2 = col_double()
+    ),
+    na = c("", "NA")
+  )
+
+  # Give the two columns the names expected by the analysis
+  names(dat) <- c("id", "calibration")
+
+  # Add date from filename
+  dat <- dat |>
+    mutate(
+      date = as.Date(file_date)
+    ) |>
+    select(date, id, calibration)
+
+  dat
+})
+
+# Look at the combined data
+print(raw)
+
+# Save as one long-format CSV
+write_csv(
+  raw,
+  "calibration_outputs/calibration_combined.csv"
+)
+```
+
+### 2.1.2 Zach's Plots & Analysis
+
+```{r}
+#Zach's original R code:
+suppressPackageStartupMessages({
+    library(tidyverse)
+    library(cowplot)
+})
+
+raw <- read_csv("calibration_outputs/calibration_combined.csv",
+                col_types="Dcd")
+cooked <- (
+    raw
+    |> subset(calibration > 0)
+    |> mutate(days = as.integer(as.double(date - date[1], unit="days")))
+    |> group_by(id)
+    |> mutate(
+       drift = abs(calibration - calibration[1]) / calibration[1],
+       max.drift = cummax(drift)
+    )
+    |> ungroup()
+)
+
+ggplot(cooked, aes(x=days, y=max.drift, colour=id, group=id)) +
+    geom_step(alpha=0.5) +
+    guides(color="none")
+```
+"This is a plot of the maximum deviation of each node's individual calibration from its calibration on day 0, as a function of time. The colors don't mean anything they're just because there's a lot of lines on top of each other here."
+
+"And that's a little hard to understand so here's another way of looking at it.  This is the number of nodes that have drifted at least x% away from their calibration on day 0, where x = 1, 2, 5, 10, 20 as indicated in the legend.  By the time we get to day 28, most of the nodes are at least 1% off, but the vast majority are still within 5%, and only a tiny handful are off by more than 10%."
+
+```{r}
+
+ggplot(cooked, aes(x=days, y=drift, colour=id, group=id)) +
+    geom_step(alpha=0.5) +
+    guides(color="none")
+
+```
+
+"But wait! Nodes might not stay way off. Here's the instantaneous drift from the calibration on day 0, rather than the maximum.  You can see that even the few nodes that go way off don't stay there.  This looks much more like a steady state process than one that's changing over time."
+
+```{r}
+
+thresholds = c(0.01, 0.02, 0.05, 0.1, 0.2)
+thresholds.pct = c("1%", "2%", "5%", "10%", "20%")
+
+drift.proportion <- (
+    crossing(cooked, threshold=thresholds)
+    |> group_by(threshold, days)
+    |> summarise(
+       drifted.above = sum(max.drift > threshold),
+       .groups="drop"
+    )
+    |> mutate(threshold = ordered(threshold,
+                                  levels=thresholds,
+                                  labels=thresholds.pct))
+)
+
+drift.proportion.2 <- (
+    crossing(cooked, threshold=thresholds)
+    |> group_by(threshold, days)
+    |> summarise(
+       drifted.above = sum(drift > threshold),
+       .groups="drop"
+    )
+    |> mutate(threshold = ordered(threshold,
+                                  levels=thresholds,
+                                  labels=thresholds.pct))
+)
+
+ggplot(drift.proportion,
+       aes(x=days, y=drifted.above, colour=threshold, group=threshold)) +
+    geom_step() +
+    scale_x_continuous("Days", limits=c(0, 28), breaks=c(0, 7, 14, 21, 28)) +
+    scale_y_continuous("# landmarks drifted past threshold",
+                       limits=c(0, 684), breaks=seq(0, 684, length.out=5)) +
+    scale_colour_manual("Threshold",
+                        values=c(
+                            "1%"="#0868ac",
+                            "2%"="#43a2ca",
+                            "5%"="#7bccc4",
+                            "10%"="#8c96c6",
+                            "20%"="#8856a7"
+                        ))
+```
+
+"Same "other way of looking at it" as before: instantaneous number of nodes that are off by more than X% from day 0."
+
+```{r}
+
+ggplot(drift.proportion.2,
+       aes(x=days, y=drifted.above, colour=threshold, group=threshold)) +
+    geom_step() +
+    scale_x_continuous("Days", limits=c(0, 28), breaks=c(0, 7, 14, 21, 28)) +
+    scale_y_continuous("# landmarks drifted past threshold",
+                       limits=c(0, 684), breaks=seq(0, 684, length.out=5)) +
+    scale_colour_manual("Threshold",
+                        values=c(
+                            "1%"="#0868ac",
+                            "2%"="#43a2ca",
+                            "5%"="#7bccc4",
+                            "10%"="#8c96c6",
+                            "20%"="#8856a7"
+                        ))
+
+```
+
+"At any given time, the number of nodes who are off by at least X% is ... roughly constant.  But which nodes those are changes from day to day. I have to think about it some more but what this is suggesting to me is that instead of redoing the calibration after some fixed number of days we should be thinking about incrementally refining the calibration on a per-node basis over time.  Sliding window medians or something. And maybe we could borrow an idea from NTP and tune the frequency of updates for each node based on how much variance we observe for that node."
+
+### 2.1.3 Adding on to Zach's Analysis
+
+The spaghetti plot from 2.1 that visualizes January 16 to April 14 2026 data and the behaviors of the quartiles demonstrate a similar behavior to Zach's analysis of October 21 to November 18 2024 calibration data. While the 2026 data points span 80 days in comparison to the 29 days of 2024 data, the same conclusions can be made about calibration deviation behavior. 
+
+## 2.2 Feature Extraction
+
+Each calibration series is summarized using several characteristics: mean level, standard deviation, linear trend, minimum, maximum, and lag-1 autocorrelation. These features provide a compact description of the different behaviors in the calibration population and form the basis for the K-means clustering analysis.
+
+```{r}
+features <- long_df %>%
+  group_by(ID) %>%
+  summarise(
+    mean_val = mean(value),
+    sd_val   = sd(value),
+    trend    = coef(lm(value ~ day))[2],
+    min_val  = min(value),
+    max_val  = max(value),
+    acf1     = acf(
+      value,
+      plot = FALSE
+    )$acf[2],
+    .groups = "drop"
+  )
+
+features_scaled <- as.data.frame(
+  scale(features[, -1])
+)
+
+features_scaled$ID <- features$ID
+```
+
+## 2.3 K-Means Method
+
+### 2.3.1 K-Means Representative Series
+
+K-means clustering is used to divide the calibration series into 20 groups based on their statistical features. Within each cluster, the series closest to the cluster center is selected as the representative. This provides a smaller set of calibration series that captures the major behavioral patterns in the full population.
+
+```{r}
+set.seed(1)
+
+k <- 20
+
+km <- kmeans(
+  features_scaled[, -ncol(features_scaled)],
+  centers = k
+)
+
+diverse_ids <- sapply(
+  1:k,
+  function(i) {
+
+    cluster_points <- features_scaled[
+      km$cluster == i,
+      -ncol(features_scaled)
+    ]
+
+    center <- km$centers[i, ]
+
+    dists <- apply(
+      cluster_points,
+      1,
+      function(x) {
+        sum((x - center)^2)
+      }
+    )
+
+    features_scaled$ID[km$cluster == i][
+      which.min(dists)
+    ]
+  }
+)
+
+stopifnot(
+  all(diverse_ids %in% complete_df$ID)
+)
+```
+
+### 2.3.2 Visualize K-Means Representatives
+
+The selected representative series are plotted and colored by continent. This allows the selected behavioral patterns to be examined alongside their geographic distribution.
+
+```{r}
+plot_kmeans_geo <- long_df_geo %>%
+  filter(ID %in% diverse_ids)
+
+ggplot(
+  plot_kmeans_geo,
+  aes(
+    day,
+    value,
+    group = ID,
+    color = continent
+  )
+) +
+  geom_line(alpha = 0.6) +
+  labs(
+    title = "K-means Representatives (Colored by Continent)",
+    color = "Continent"
+  ) +
+  facet_wrap(~continent)
+```
+
+### 2.3.3 K-Means Cluster Sizes
+
+For each selected representative, the number of series belonging to its cluster is calculated. This indicates how many calibration series are represented by each selected example.
+
+```{r}
+cluster_sizes <- table(km$cluster)
+
+rep_clusters <- km$cluster[
+  match(
+    diverse_ids,
+    features_scaled$ID
+  )
+]
+
+rep_counts <- cluster_sizes[rep_clusters]
+
+kmeans_summary <- data.frame(
+  ID = diverse_ids,
+  cluster = rep_clusters,
+  similar_series_count = as.numeric(rep_counts)
+)
+
+kmeans_summary
+```
+
+## 2.4 Correlation Method 
+
+### 2.4.1 Correlation-Based Similarity
+
+A second approach compares calibration series directly using their time-series correlation. A correlation of at least 0.90 is treated as indicating strong similarity. For each K-means representative, the number of highly correlated series is then counted.
+
+```{r}
+cor_mat <- cor(
+  t(wide_mat),
+  use = "pairwise.complete.obs"
+)
+
+rownames(cor_mat) <- rownames(wide_mat)
+colnames(cor_mat) <- rownames(wide_mat)
+
+correlation_threshold <- 0.9
+
+rep_counts_cor <- sapply(
+  diverse_ids,
+  function(id) {
+    sum(
+      cor_mat[id, ] >= correlation_threshold
+    ) - 1
+  }
+)
+```
+
+### 2.4.2 Visualize Correlation-Based Representatives
+
+The same K-means representative IDs are visualized using their correlation relationships and geographic metadata.
+
+```{r}
+plot_cor_geo <- long_df_geo %>%
+  filter(ID %in% diverse_ids)
+
+ggplot(
+  plot_cor_geo,
+  aes(
+    day,
+    value,
+    group = ID,
+    color = continent
+  )
+) +
+  geom_line(alpha = 0.6) +
+  labs(
+    title = "Correlation-Based Representatives (Colored by Continent)",
+    color = "Continent"
+  ) +
+  facet_wrap(~continent)
+```
+
+### 2.4.3 Correlation Summary
+
+The following table records how many other calibration series are at least 90% correlated with each representative.
+
+```{r}
+cor_summary <- data.frame(
+  ID = diverse_ids,
+  similar_series_count = rep_counts_cor
+)
+
+cor_summary
+```
+
+## 2.5 Greedy Method
+
+### 2.5.1 Greedy Representative Selection
+
+A third approach selects a small number of series that are maximally different from one another.
+
+Correlation is converted into a distance measure using: distance = 1 - correlation. The greedy procedure first selects the most globally separated series and then iteratively chooses the series that is farthest from the already-selected representatives.
+
+```{r}
+dist_mat <- as.matrix(
+  as.dist(1 - cor_mat)
+)
+
+get_similar_ids_greedy <- function(
+  target_id,
+  threshold
+) {
+  names(
+    which(
+      dist_mat[target_id, ] <= threshold
+    )
+  )
+}
+```
+
+```{r}
+k <- 10
+
+selected <- which.max(
+  rowMeans(dist_mat)
+)
+
+for (i in 2:k) {
+
+  remaining <- setdiff(
+    1:nrow(wide_mat),
+    selected
+  )
+
+  next_id <- remaining[
+    which.max(
+      apply(
+        dist_mat[
+          remaining,
+          selected,
+          drop = FALSE
+        ],
+        1,
+        min
+      )
+    )
+  ]
+
+  selected <- c(
+    selected,
+    next_id
+  )
+}
+
+diverse_ids_greedy <- rownames(wide_mat)[selected]
+```
+
+### 2.5.2 Visualize Greedy Representatives
+
+The selected series are plotted individually and then with geographic information to examine the diversity captured by the greedy method.
+
+```{r}
+plot_greedy <- long_df %>%
+  filter(ID %in% diverse_ids_greedy)
+
+ggplot(
+  plot_greedy,
+  aes(
+    day,
+    value,
+    color = factor(ID)
+  )
+) +
+  geom_line() +
+  labs(
+    title = "Greedy-Distance Representatives",
+    color = "ID"
+  )
+```
+
+```{r}
+plot_greedy_geo <- long_df_geo %>%
+  filter(ID %in% diverse_ids_greedy)
+
+ggplot(
+  plot_greedy_geo,
+  aes(
+    day,
+    value,
+    group = ID,
+    color = country
+  )
+) +
+  geom_line(alpha = 0.7) +
+  labs(
+    title = "Greedy Representatives (Colored by Country)",
+    color = "Country"
+  ) +
+  facet_wrap(~continent)
+```
+
+### 2.5.3 Similarity Counts for Greedy Representatives
+
+A threshold based on the 20th percentile of the distance matrix is used to count the number of relatively similar series associated with each greedy representative.
+
+```{r}
+threshold_dist <- quantile(
+  dist_mat,
+  0.2
+)
+
+greedy_counts <- sapply(
+  diverse_ids_greedy,
+  function(id) {
+    sum(
+      dist_mat[id, ] <= threshold_dist
+    )
+  }
+)
+
+greedy_summary <- data.frame(
+  ID = diverse_ids_greedy,
+  similar_series_count = greedy_counts
+)
+
+greedy_summary
+```
+
+## 2.6 Geographic Information for Representative Series
+
+Geographic metadata are added to the K-means, correlation, and greedy representative summaries so that the selected series can be interpreted in their geographic context.
+
+```{r}
+kmeans_summary <- kmeans_summary %>%
+  left_join(
+    landmarks_subset,
+    by = "ID"
+  )
+
+cor_summary <- cor_summary %>%
+  left_join(
+    landmarks_subset,
+    by = "ID"
+  )
+
+greedy_summary <- greedy_summary %>%
+  left_join(
+    landmarks_subset,
+    by = "ID"
+  )
+
+greedy_summary
+```
+
+## 2.7 Build Similarity Tables
+
+For each representative, the analysis creates a table of the individual IDs that are considered similar to that representative. Separate tables are produced for the greedy, K-means, and correlation-based methods.
+
+### 2.7.1 Greedy Based
+
+```{r}
+greedy_sim_tables <- lapply(
+  diverse_ids_greedy,
+  function(id) {
+
+    threshold <- quantile(
+      dist_mat[id, ],
+      0.2
+    )
+
+    similar_ids <- names(
+      which(
+        dist_mat[id, ] <= threshold
+      )
+    )
+
+    data.frame(ID = similar_ids) %>%
+      left_join(
+        landmarks_subset,
+        by = "ID"
+      ) %>%
+      mutate(
+        representative = id,
+        method = "greedy"
+      )
+  }
+)
+
+greedy_sim_table <- bind_rows(
+  greedy_sim_tables
+)
+
+greedy_sim_table <- greedy_sim_table[, -ncol(greedy_sim_table)]
+head(greedy_sim_table)
+```
+
+### 2.7.2 K Means Based
+
+```{r}
+kmeans_sim_tables <- lapply(
+  seq_along(diverse_ids),
+  function(i) {
+
+    rep_id <- diverse_ids[i]
+    cluster_id <- rep_clusters[i]
+
+    similar_ids <- features_scaled$ID[
+      km$cluster == cluster_id
+    ]
+
+    data.frame(ID = similar_ids) %>%
+      left_join(
+        landmarks_subset,
+        by = "ID"
+      ) %>%
+      mutate(
+        representative = rep_id,
+        method = "kmeans"
+      )
+  }
+)
+
+kmeans_sim_table <- bind_rows(
+  kmeans_sim_tables
+)
+
+kmeans_sim_table <- kmeans_sim_table[, -ncol(kmeans_sim_table)]
+head(kmeans_sim_table)
+```
+
+### 2.7.3 Correlation-Based
+
+```{r}
+cor_sim_tables <- lapply(
+  diverse_ids,
+  function(id) {
+
+    similar_ids <- names(
+      which(
+        cor_mat[id, ] >= correlation_threshold
+      )
+    )
+
+    data.frame(ID = similar_ids) %>%
+      left_join(
+        landmarks_subset,
+        by = "ID"
+      ) %>%
+      mutate(
+        representative = id,
+        method = "correlation"
+      )
+  }
+)
+
+cor_sim_table <- bind_rows(
+  cor_sim_tables
+)
+
+cor_sim_table <- cor_sim_table[, -ncol(cor_sim_table)]
+head(cor_sim_table)
+```
+
+## 2.8 Geographic Composition of K-Means Clusters
+
+The next analysis asks whether behavioral clusters correspond to geographic regions. For every K-means cluster, the proportion of observations belonging to each continent is calculated. Cluster purity is defined as the proportion of the cluster belonging to its most common continent. A purity of 1 indicates that a cluster consists entirely of one continent, while lower values indicate more geographically mixed clusters.
+
+```{r}
+cluster_geo <- features_scaled %>%
+  select(ID) %>%
+  mutate(
+    cluster = km$cluster
+  ) %>%
+  left_join(
+    landmarks_subset,
+    by = "ID"
+  )
+
+cluster_continent_table <- cluster_geo %>%
+  group_by(
+    cluster,
+    continent
+  ) %>%
+  summarise(
+    n = n(),
+    .groups = "drop"
+  ) %>%
+  group_by(cluster) %>%
+  mutate(
+    cluster_total = sum(n),
+    proportion = n / cluster_total
+  )
+
+cluster_purity <- cluster_continent_table %>%
+  group_by(cluster) %>%
+  summarise(
+    purity = max(proportion),
+    dominant_continent = continent[
+      which.max(proportion)
+    ],
+    cluster_size = sum(n),
+    .groups = "drop"
+  ) %>%
+  arrange(purity)
+
+cluster_purity
+```
+
+## 2.9 Visualize Cluster Geography
+
+The composition of each K-means cluster is visualized as a stacked bar chart. This provides a direct view of how geographically mixed each cluster is.
+
+```{r}
+ggplot(
+  cluster_continent_table,
+  aes(
+    x = factor(cluster),
+    y = proportion,
+    fill = continent
+  )
+) +
+  geom_bar(
+    stat = "identity"
+  ) +
+  labs(
+    title = "Continent Composition of K-means Clusters",
+    x = "Cluster",
+    y = "Proportion",
+    fill = "Continent"
+  )
+```
+\newpage
+
+# 3. Stationarity Testing
+
+The Augmented Dickey-Fuller (ADF) test is applied independently to every calibration series. A p-value below 0.05 is classified as stationary. This allows the analysis to separate calibration series with relatively stable statistical behavior from series whose underlying behavior changes over time.
+
+```{r}
+stationarity_df <- long_df %>%
+  group_by(ID) %>%
+  summarise(
+    p_value = tryCatch(
+      adf.test(value)$p.value,
+      error = function(e) NA
+    ),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    stationary = p_value < 0.05
+  )
+
+stationarity_geo <- stationarity_df %>%
+  left_join(
+    landmarks_subset,
+    by = "ID"
+  )
+
+stationary_only <- stationarity_geo %>%
+  filter(stationary == TRUE)
+```
+
+## 3.1 Geographic Distribution of Stationarity
+
+The next analyses examine whether stationary and nonstationary calibration series are distributed differently across continents.
+
+```{r}
+continent_share <- stationary_only %>%
+  group_by(continent) %>%
+  summarise(
+    n = n(),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    proportion = n / sum(n)
+  ) %>%
+  arrange(desc(proportion))
+
+continent_share
+```
+
+```{r}
+continent_compare <- stationarity_geo %>%
+  group_by(continent) %>%
+  summarise(
+    total = n(),
+    stationary = sum(stationary, na.rm = TRUE),
+    proportion_stationary = stationary / total,
+    .groups = "drop"
+  ) %>%
+  arrange(desc(proportion_stationary))
+
+continent_compare
+```
+
+```{r}
+ggplot(
+  continent_share,
+  aes(
+    x = continent,
+    y = proportion,
+    fill = continent
+  )
+) +
+  geom_bar(stat = "identity") +
+  labs(
+    title = "Continent Distribution of Stationary Time Series",
+    x = "Continent",
+    y = "Proportion"
+  ) +
+  theme_minimal()
+```
+
+## 3.2 Nonstationary Series
+
+The complementary population of nonstationary series is identified and its geographic composition is examined
+
+```{r}
+nonstationary_only <- stationarity_geo %>%
+  filter(
+    stationary == FALSE |
+      is.na(stationary)
+  )
+
+nonstationary_continent_share <- nonstationary_only %>%
+  group_by(continent) %>%
+  summarise(
+    n = n(),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    proportion = n / sum(n)
+  ) %>%
+  arrange(desc(proportion))
+
+nonstationary_continent_share
+```
+
+```{r}
+ggplot(
+  nonstationary_continent_share,
+  aes(
+    x = continent,
+    y = proportion,
+    fill = continent
+  )
+) +
+  geom_bar(stat = "identity") +
+  labs(
+    title = "Continent Distribution of Nonstationary Time Series",
+    x = "Continent",
+    y = "Proportion"
+  ) +
+  theme_minimal()
+```
+
+## 3.3 Stationarity by Continent
+
+A combined table summarizes the total number of series and the proportion that are stationary or nonstationary within each continent.
+
+```{r}
+continent_comparison <- stationarity_geo %>%
+  group_by(continent) %>%
+  summarise(
+    total = n(),
+    stationary = sum(
+      stationary,
+      na.rm = TRUE
+    ),
+    nonstationary = sum(
+      !stationary,
+      na.rm = TRUE
+    ),
+    prop_stationary = stationary / total,
+    prop_nonstationary = nonstationary / total,
+    .groups = "drop"
+  ) %>%
+  arrange(desc(prop_nonstationary))
+
+continent_comparison
+```
+
+```{r}
+nonstationarity_bias <- stationarity_geo %>%
+  group_by(continent) %>%
+  summarise(
+    total = n(),
+    nonstationary = sum(
+      !stationary,
+      na.rm = TRUE
+    ),
+    proportion_nonstationary =
+      nonstationary / total,
+    .groups = "drop"
+  ) %>%
+  arrange(
+    desc(proportion_nonstationary)
+  )
+
+nonstationarity_bias
+```
+
+## 3.4 Volatility of Nonstationary Series
+
+The next step identifies the most highly volatile nonstationary calibration series. Volatility is measured as the mean absolute change between consecutive observations. Standard deviation is also calculated as a second measure of overall variation.
+
+```{r}
+nonstationary_ids <- nonstationary_only$ID
+
+nonstationary_df <- long_df %>%
+  filter(ID %in% nonstationary_ids) %>%
+  arrange(ID, day)
+```
+
+```{r}
+volatility_df <- nonstationary_df %>%
+  arrange(ID, day) %>%
+  group_by(ID) %>%
+  summarise(
+    volatility = mean(
+      abs(diff(value)),
+      na.rm = TRUE
+    ),
+    sd_value = sd(
+      value,
+      na.rm = TRUE
+    ),
+    .groups = "drop"
+  ) %>%
+  arrange(
+    desc(volatility)
+  )
+
+top_volatile <- volatility_df %>%
+  slice_head(n = 10)
+
+top_20_volatile <- volatility_df %>%
+  slice_head(n = 20)
+
+top_volatile_geo <- top_volatile %>%
+  left_join(
+    landmarks_subset,
+    by = "ID"
+  )
+
+top_volatile
+top_volatile_geo
+```
+
+## 3.5 Visualize Highly Volatile Series
+
+The ten most volatile nonstationary series are plotted individually so that their behavior can be inspected directly.
+
+```{r}
+plot_volatile <- long_df %>%
+  filter(ID %in% top_volatile$ID)
+
+ggplot(
+  plot_volatile,
+  aes(
+    day,
+    value,
+    group = ID
+  )
+) +
+  geom_line(alpha = 0.7) +
+  facet_wrap(
+    ~ID,
+    scales = "free_y"
+  ) +
+  labs(
+    title = "Most Volatile Nonstationary Series"
+  )
+```
+
+## 3.6 Volatility and Geography
+
+Volatility statistics are joined to geographic metadata to determine how the nonstationary population is distributed across continents.
+
+```{r}
+cp_results <- nonstationary_df %>%
+  group_by(ID) %>%
+  summarise(
+    cp = list({
+
+      x <- value
+
+      if (length(x) < 20) {
+        return(NA)
+      }
+
+      fit <- cpt.meanvar(
+        x,
+        method = "PELT",
+        penalty = "BIC",
+        minseglen = 10
+      )
+
+      cpts(fit)
+    }),
+    .groups = "drop"
+  )
+
+cp_table <- cp_results %>%
+  tidyr::unnest_longer(cp) %>%
+  filter(!is.na(cp)) %>%
+  rename(
+    change_point_index = cp
+  )
+
+cp_table <- cp_table %>%
+  left_join(
+    nonstationary_df %>%
+      select(ID, day) %>%
+      distinct() %>%
+      group_by(ID) %>%
+      mutate(time_index = row_number()) %>%
+      ungroup(),
+    by = "ID"
+  ) %>%
+  filter(
+    time_index == change_point_index
+  )
+
+cp_summary <- cp_table %>%
+  group_by(ID) %>%
+  summarise(
+    n_changes = n(),
+    .groups = "drop"
+  )
+```
+
+```{r}
+volatility_df_2 <- volatility_df %>%
+  left_join(
+    cp_summary,
+    by = "ID"
+  ) %>%
+  left_join(
+    stationarity_geo,
+    by = "ID"
+  )
+
+volatility_geo <- volatility_df %>%
+  left_join(
+    landmarks_subset,
+    by = "ID"
+  )
+
+continent_counts <- volatility_geo %>%
+  group_by(continent) %>%
+  summarise(
+    n_series = n(),
+    .groups = "drop"
+  ) %>%
+  arrange(
+    desc(n_series)
+  )
+
+continent_counts
+```
+
+```{r}
+continent_props <- volatility_geo %>%
+  group_by(continent) %>%
+  summarise(
+    n_series = n(),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    proportion = n_series / sum(n_series)
+  ) %>%
+  arrange(
+    desc(proportion)
+  )
+
+continent_props
+```
+
+## 3.7 High-Volatility Series by Continent
+
+A series is classified as highly volatile when its volatility exceeds the 90th percentile of volatility across the nonstationary population.
+
+The resulting table shows the number and proportion of high-volatility series within each continent.
+
+```{r}
+volatility_geo %>%
+  mutate(
+    high_vol =
+      volatility >
+      quantile(
+        volatility,
+        0.9,
+        na.rm = TRUE
+      )
+  ) %>%
+  group_by(continent) %>%
+  summarise(
+    high_vol_count = sum(high_vol),
+    total = n(),
+    proportion_high_vol =
+      high_vol_count / total,
+    .groups = "drop"
+  )
+```
+
+## 3.8 Stationarity Summary by Continent
+
+This provides another consolidated view of stationary versus nonstationary behavior within each continent.
+
+```{r}
+continent_stationarity <- stationarity_geo %>%
+  group_by(continent) %>%
+  summarise(
+    total = n(),
+    stationary = sum(
+      stationary,
+      na.rm = TRUE
+    ),
+    nonstationary = sum(
+      !stationary,
+      na.rm = TRUE
+    ),
+    prop_stationary =
+      stationary / total,
+    prop_nonstationary =
+      nonstationary / total,
+    .groups = "drop"
+  ) %>%
+  arrange(
+    desc(prop_nonstationary)
+  )
+
+continent_stationarity
+```
+\newpage
+
+## 4. Change-Point Analysis
+
+The nonstationary series are examined for discrete changes in their mean or variance.
+
+The PELT method with a BIC penalty is used to identify change points. A minimum segment length of 10 observations is required, and series shorter than 20 observations are skipped.
+
+## 4.1 Visualize Detected Change Points
+
+Six nonstationary series are sampled for visualization. The detected change points are overlaid on the corresponding time series.
+
+```{r}
+sample_ids <- sample(
+  nonstationary_ids,
+  6
+)
+
+plot_cp <- nonstationary_df %>%
+  filter(ID %in% sample_ids)
+
+ggplot(
+  plot_cp,
+  aes(
+    day,
+    value,
+    group = ID
+  )
+) +
+  geom_line(alpha = 0.6) +
+  geom_vline(
+    data = cp_table %>%
+      filter(ID %in% sample_ids),
+    aes(
+      xintercept = change_point_index
+    ),
+    color = "red",
+    linetype = "dashed"
+  ) +
+  facet_wrap(
+    ~ID,
+    scales = "free_y"
+  ) +
+  labs(
+    title = "Change Point Detection in Nonstationary Series"
+  )
+```
+
+```{r}
+cp_summary
+```
+
+## 4.2 Online Change-Point Analysis
+
+A second change-detection approach uses a CUSUM-style online procedure.
+
+The first 20 observations establish a baseline mean. Subsequent observations are accumulated into a CUSUM statistic, with an alarm generated when the statistic exceeds the specified threshold. The statistic is reset after an alarm.
+
+```{r}
+online_cusum <- function(
+  x,
+  k = 0.5,
+  h = 8
+) {
+
+  mu0 <- mean(
+    x[1:20],
+    na.rm = TRUE
+  )
+
+  S <- numeric(length(x))
+  alarm <- rep(
+    0,
+    length(x)
+  )
+
+  for (t in 2:length(x)) {
+
+    S[t] <- max(
+      0,
+      S[t - 1] +
+        (x[t] - mu0 - k)
+    )
+
+    if (S[t] > h) {
+      alarm[t] <- 1
+      S[t] <- 0
+    }
+  }
+
+  list(
+    stat = S,
+    alarm = alarm
+  )
+}
+```
+
+```{r}
+online_results <- nonstationary_df %>%
+  group_by(ID) %>%
+  summarise(
+    result = list(
+      online_cusum(value)
+    ),
+    .groups = "drop"
+  )
+
+online_cpts <- nonstationary_df %>%
+  group_by(ID) %>%
+  mutate(alarm = online_results$result[[which(online_results$ID == first(ID))]]$alarm) %>%
+  filter(alarm == 1) %>%
+  select(
+    ID,
+    day,
+    value
+  )
+```
+
+## 4.3 Visualize Online Change Points
+
+The online alarms are plotted for six randomly selected nonstationary series.
+
+```{r}
+sample_ids <- sample(
+  nonstationary_ids,
+  6
+)
+
+plot_online <- nonstationary_df %>%
+  filter(ID %in% sample_ids)
+
+ggplot(
+  plot_online,
+  aes(day, value)
+) +
+  geom_line(alpha = 0.8) +
+  geom_point(
+    data = online_cpts %>%
+      filter(ID %in% sample_ids),
+    aes(day, value),
+    color = "red",
+    size = 0.5
+  ) +
+  facet_wrap(
+    ~ID,
+    scales = "free_y"
+  ) +
+  labs(
+    title = "Online Change Point Detection (CUSUM)"
+  )
+```
+\newpage
+
+# 5. Geographic Representation Before and After Filtering
+
+The next comparison tracks how many calibration anchors are present in each continent before filtering and how many remain after the QMD's filtering and complete-case requirements.
+
+The final columns then show the proportion of stationary and nonstationary series among the retained observations.
+
+```{r}
+# Total observations in the original landmark dataset
+total_by_continent <- landmarks_subset %>%
+  group_by(continent) %>%
+  summarise(
+    total_observations = n(),
+    .groups = "drop"
+  )
+
+# Observations retained in the final complete dataset
+selected_by_continent <- complete_df %>%
+  distinct(ID) %>%
+  left_join(
+    landmarks_subset,
+    by = "ID"
+  ) %>%
+  group_by(continent) %>%
+  summarise(
+    selected_observations = n(),
+    .groups = "drop"
+  )
+
+# Stationarity proportions among retained observations
+stationarity_by_continent <- stationarity_geo %>%
+  group_by(continent) %>%
+  summarise(
+    prop_stationary =
+      mean(
+        stationary,
+        na.rm = TRUE
+      ),
+    prop_nonstationary =
+      mean(
+        !stationary,
+        na.rm = TRUE
+      ),
+    .groups = "drop"
+  )
+
+# Combined summary
+continent_summary <- total_by_continent %>%
+  left_join(
+    selected_by_continent,
+    by = "continent"
+  ) %>%
+  left_join(
+    stationarity_by_continent,
+    by = "continent"
+  ) %>%
+  arrange(continent)
+
+continent_summary
+```
+\newpage
+
+# 6. White Noise and Stationarity Classification
+
+The next stage distinguishes random-looking calibration series from series with detectable temporal structure. The Ljung-Box test is used to identify white-noise behavior, while the ADF test is used to classify stationarity.
+
+The two tests are combined into four initial categories: White noise & stationary, White noise & nonstationary, Structured & stationary, and Structured & nonstationary
+
+```{r}
+classification_df <- long_df %>%
+  group_by(ID) %>%
+  summarise(
+
+    x = list(
+      na.omit(value)
+    ),
+
+    # Ljung-Box white-noise test
+    lb_p = tryCatch({
+
+      xvec <- x[[1]]
+
+      if (length(xvec) < 20) {
+        return(NA_real_)
+      }
+
+      Box.test(
+        xvec,
+        lag = min(
+          10,
+          floor(length(xvec) / 5)
+        ),
+        type = "Ljung-Box"
+      )$p.value
+
+    }, error = function(e) {
+      NA_real_
+    }),
+
+    # Augmented Dickey-Fuller stationarity test
+    adf_p = tryCatch({
+
+      xvec <- x[[1]]
+
+      if (length(xvec) < 20) {
+        return(NA_real_)
+      }
+
+      adf.test(xvec)$p.value
+
+    }, error = function(e) {
+      NA_real_
+    }),
+
+    .groups = "drop"
+  ) %>%
+  mutate(
+
+    is_white_noise =
+      lb_p > 0.05,
+
+    is_stationary =
+      adf_p < 0.05,
+
+    category = case_when(
+
+      is_white_noise &
+        is_stationary ~
+        "White noise (stationary)",
+
+      is_white_noise &
+        !is_stationary ~
+        "White noise (nonstationary?)",
+
+      !is_white_noise &
+        is_stationary ~
+        "Stationary (structured)",
+
+      TRUE ~
+        "Nonstationary (structured)"
+    )
+  )
+
+classification_df %>%
+  group_by(category) %>%
+  summarise(
+    n = n(),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    prop = n / sum(n)
+  )
+```
+
+## 6.1 White-Noise Classification
+
+The Ljung-Box test is also isolated so that white-noise series can be analyzed independently of the stationarity classification.
+
+```{r}
+white_noise_df <- long_df %>%
+  group_by(ID) %>%
+  summarise(
+
+    p_value_lb = tryCatch({
+
+      x <- na.omit(value)
+
+      if (length(x) < 20) {
+        return(NA_real_)
+      }
+
+      Box.test(
+        x,
+        lag = min(
+          10,
+          floor(length(x) / 5)
+        ),
+        type = "Ljung-Box"
+      )$p.value
+
+    }, error = function(e) {
+      NA_real_
+    }),
+
+    .groups = "drop"
+  ) %>%
+  mutate(
+    is_white_noise =
+      p_value_lb > 0.05
+  )
+
+white_noise_geo <- white_noise_df %>%
+  left_join(
+    landmarks_subset,
+    by = "ID"
+  )
+```
+
+## 6.2 Overall White-Noise Proportion
+
+The overall proportion of calibration series classified as white noise is calculated.
+
+```{r}
+white_noise_summary <- white_noise_geo %>%
+  summarise(
+    total = n(),
+    white_noise =
+      sum(
+        is_white_noise,
+        na.rm = TRUE
+      ),
+    proportion_white_noise =
+      white_noise / total
+  )
+
+white_noise_summary
+```
+
+## 6.3 White Noise by Continent
+
+The proportion of white-noise series is compared across continents.
+
+```{r}
+white_noise_by_continent <- white_noise_geo %>%
+  group_by(continent) %>%
+  summarise(
+    total = n(),
+    white_noise =
+      sum(
+        is_white_noise,
+        na.rm = TRUE
+      ),
+    proportion_white_noise =
+      white_noise / total,
+    .groups = "drop"
+  ) %>%
+  arrange(
+    desc(proportion_white_noise)
+  )
+
+white_noise_by_continent
+
+continent_stationarity
+```
+
+## 6.4 Stationarity Among Non-White-Noise Series
+
+For series that are not classified as white noise, the ADF test is applied again to explicitly identify which of those series are stationary.
+
+This produces the final three-way classification: White noise (unstructured), Stationary (structured), and Nonstationary (structured).
+
+```{r}
+adf_non_white_noise <- long_df %>%
+  inner_join(
+    white_noise_df %>%
+      filter(
+        is_white_noise == FALSE
+      ),
+    by = "ID"
+  ) %>%
+  group_by(ID) %>%
+  summarise(
+
+    adf_p = tryCatch({
+
+      x <- na.omit(value)
+
+      if (length(x) < 20) {
+        return(NA_real_)
+      }
+
+      adf.test(x)$p.value
+
+    }, error = function(e) {
+      NA_real_
+    }),
+
+    .groups = "drop"
+  ) %>%
+  mutate(
+    is_stationary =
+      adf_p < 0.05
+  )
+
+final_classification <- white_noise_df %>%
+  select(
+    ID,
+    is_white_noise
+  ) %>%
+  left_join(
+    adf_non_white_noise,
+    by = "ID"
+  ) %>%
+  mutate(
+    category = case_when(
+
+      is_white_noise ~
+        "White noise (unstructured)",
+
+      is_stationary ~
+        "Stationary (structured)",
+
+      TRUE ~
+        "Nonstationary (structured)"
+    )
+  )
+```
+
+## 6.5 Final Classification Tables
+
+The stationary white-noise series and structured stationary series are identified separately, followed by an overall classification summary.
+
+```{r}
+white_noise_stationary <- final_classification %>%
+  filter(
+    is_white_noise == TRUE,
+    is_stationary == TRUE
+  )
+
+white_noise_stationary
+```
+
+```{r}
+non_white_noise_stationary <- final_classification %>%
+  filter(
+    is_white_noise == FALSE,
+    is_stationary == TRUE
+  )
+
+non_white_noise_stationary
+```
+
+```{r}
+summary_table <- final_classification %>%
+  group_by(category) %>%
+  summarise(
+    n = n(),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    proportion = n / sum(n)
+  )
+
+summary_table
+```
+
+## 6.6 Investigating White-Noise but Nonstationary Series
+
+Some series are classified as white noise by the Ljung-Box test but nonstationary by the ADF test.
+
+These series are examined visually because the combination of the two tests suggests that they may contain slowly changing behavior that is not easily detected as conventional temporal structure.
+
+```{r}
+id_check <- classification_df %>%
+  filter(
+    is_white_noise == TRUE,
+    is_stationary == FALSE
+  ) %>%
+  pull(ID) %>%
+  first()
+
+ggplot(
+  long_df %>%
+    filter(ID == id_check),
+  aes(day, value)
+) +
+  geom_line()
+```
+
+## 6.7 Visualize All White-Noise / Nonstationary Series
+
+All white-noise/nonstationary series are plotted in groups of nine to allow visual inspection of potential drift, steps, variance changes, or other instability.
+
+```{r}
+wn_ns_ids <- classification_df %>%
+  filter(
+    is_white_noise == TRUE,
+    is_stationary == FALSE
+  ) %>%
+  pull(ID)
+
+wn_ns_df <- long_df %>%
+  filter(ID %in% wn_ns_ids)
+
+ids <- unique(wn_ns_ids)
+
+chunk_size <- 9
+
+id_chunks <- split(
+  ids,
+  ceiling(
+    seq_along(ids) / chunk_size
+  )
+)
+
+for (i in seq_along(id_chunks)) {
+
+  plot_data <- wn_ns_df %>%
+    filter(
+      ID %in% id_chunks[[i]]
+    )
+
+  p <- ggplot(
+    plot_data,
+    aes(day, value)
+  ) +
+    geom_line() +
+    facet_wrap(
+      ~ID,
+      scales = "free_y",
+      ncol = 3
+    ) +
+    labs(
+      title = paste(
+        "White Noise / Nonstationary — Page",
+        i
+      )
+    )
+
+  print(p)
+}
+```
+
+### 6.7.1 Save White-Noise / Nonstationary Visualizations
+
+The same visualizations are saved as PNG files for later inspection.
+
+```{r}
+for (i in seq_along(id_chunks)) {
+
+  plot_data <- wn_ns_df %>%
+    filter(
+      ID %in% id_chunks[[i]]
+    )
+
+  p <- ggplot(
+    plot_data,
+    aes(day, value)
+  ) +
+    geom_line() +
+    facet_wrap(
+      ~ID,
+      scales = "free_y",
+      ncol = 3
+    ) +
+    labs(
+      title = paste(
+        "White Noise / Nonstationary — Page",
+        i
+      )
+    )
+
+  ggsave(
+    paste0(
+      "wn_ns_page_",
+      i,
+      ".png"
+    ),
+    p,
+    width = 10,
+    height = 8
+  )
+}
+```
+\newpage
+
+# 7. Moving-Average 
+
+## 7.1 Moving-Average Stationarity Check
+
+The white-noise/nonstationary series are smoothed using a centered MA(5). The purpose is to reduce short-term fluctuations and test whether the underlying smoothed signal behaves more like a stationary process.
+
+```{r}
+ma_results <- wn_ns_df %>%
+  group_by(ID) %>%
+  summarise(
+
+    ma_adf_p = tryCatch({
+
+      x <- na.omit(value)
+
+      if (length(x) < 20) {
+        return(NA_real_)
+      }
+
+      x_ma <- zoo::rollmean(
+        x,
+        k = 5,
+        fill = NA,
+        align = "center"
+      )
+
+      x_ma <- na.omit(x_ma)
+
+      if (length(x_ma) < 20) {
+        return(NA_real_)
+      }
+
+      adf.test(x_ma)$p.value
+
+    }, error = function(e) {
+      NA_real_
+    }),
+
+    .groups = "drop"
+  ) %>%
+  mutate(
+    ma_stationary =
+      ma_adf_p < 0.05
+  )
+```
+
+## 7.2 Compare Original and Smoothed Stationarity
+
+The original ADF classification is compared with the ADF result after MA(5) smoothing. This determines how many white-noise/nonstationary series become stationary after short-term fluctuations are smoothed out.
+
+```{r}
+wn_ns_comparison <- classification_df %>%
+  filter(
+    is_white_noise == TRUE,
+    is_stationary == FALSE
+  ) %>%
+  select(
+    ID,
+    adf_p
+  ) %>%
+  left_join(
+    ma_results,
+    by = "ID"
+  )
+
+ma_stationary_ids <- wn_ns_comparison %>%
+  filter(
+    ma_stationary == TRUE
+  ) %>%
+  select(ID)
+
+wn_ns_comparison
+```
+
+## 7.3 First Smoothing Stage: Summary of MA(5) Results
+
+The number and proportion of initially nonstationary white-noise series that become stationary after MA(5) smoothing are calculated.
+
+```{r}
+wn_ns_summary <- wn_ns_comparison %>%
+  summarise(
+    total = n(),
+    become_stationary =
+      sum(
+        ma_stationary,
+        na.rm = TRUE
+      ),
+    proportion =
+      become_stationary / total
+  )
+
+wn_ns_summary
+```
+
+### 7.3.1 Visualize Series Becoming Stationary After MA(5)
+
+Series that become stationary after MA(5) are visualized with both the original and smoothed signals.
+
+```{r}
+ids <- ma_stationary_ids %>%
+  pull(ID)
+
+chunk_size <- 4
+
+id_chunks <- split(
+  ids,
+  ceiling(
+    seq_along(ids) / chunk_size
+  )
+)
+
+for (i in seq_along(id_chunks)) {
+
+  plot_data <- wn_ns_df %>%
+    filter(
+      ID %in% id_chunks[[i]]
+    ) %>%
+    group_by(ID) %>%
+    mutate(
+      ma = zoo::rollmean(
+        value,
+        k = 5,
+        fill = NA,
+        align = "center"
+      )
+    )
+
+  if (nrow(plot_data) == 0) {
+    next
+  }
+
+  p <- ggplot(
+    plot_data,
+    aes(day)
+  ) +
+    geom_line(
+      aes(y = value),
+      alpha = 0.5
+    ) +
+    geom_line(
+      aes(y = ma),
+      linewidth = 1
+    ) +
+    facet_wrap(
+      ~ID,
+      scales = "free_y",
+      ncol = 2
+    ) +
+    labs(
+      title = paste(
+        "MA-Stationary Series — Page",
+        i
+      )
+    )
+
+  print(p)
+}
+```
+
+### 7.3.2 Save MA(5) Visualizations
+
+The MA(5) plots are saved as PNG files.
+
+```{r}
+for (i in seq_along(id_chunks)) {
+
+  plot_data <- wn_ns_df %>%
+    filter(
+      ID %in% id_chunks[[i]]
+    ) %>%
+    group_by(ID) %>%
+    mutate(
+      ma = zoo::rollmean(
+        value,
+        k = 5,
+        fill = NA,
+        align = "center"
+      )
+    )
+
+  p <- ggplot(
+    plot_data,
+    aes(day)
+  ) +
+    geom_line(
+      aes(y = value),
+      alpha = 0.5
+    ) +
+    geom_line(
+      aes(y = ma),
+      linewidth = 1
+    ) +
+    facet_wrap(
+      ~ID,
+      scales = "free_y",
+      ncol = 2
+    ) +
+    labs(
+      title = paste(
+        "MA-Stationary Series — Page",
+        i
+      )
+    )
+
+  ggsave(
+    filename = paste0(
+      "ma5_stationary_page_",
+      i,
+      ".png"
+    ),
+    plot = p,
+    width = 8,
+    height = 6
+  )
+}
+```
+
+### 7.3.3 Remaining White-Noise / Nonstationary Series
+
+The series that remain nonstationary after the first MA(5) smoothing are isolated for additional smoothing.
+
+```{r}
+still_nonstationary_ids <- wn_ns_comparison %>%
+  filter(
+    ma_stationary == FALSE |
+      is.na(ma_stationary)
+  ) %>%
+  pull(ID)
+
+length(still_nonstationary_ids)
+```
+
+```{r}
+ma_nonstationary_df <- wn_ns_df %>%
+  filter(
+    ID %in% still_nonstationary_ids
+  ) %>%
+  group_by(ID) %>%
+  mutate(
+    ma = zoo::rollmean(
+      value,
+      k = 5,
+      fill = NA,
+      align = "center"
+    )
+  ) %>%
+  ungroup()
+```
+
+## 7.4 Second Smoothing Stage: Summary of MA(5) → MA(10) Results
+
+The remaining series are subjected to a second smoothing stage. The first MA(5) reduces short-term variation, and an MA(10) is then applied to the resulting signal. The resulting smoothed series is tested for stationarity again.
+
+```{r}
+ma_df <- ma_nonstationary_df %>%
+  group_by(ID) %>%
+  mutate(
+    ma5 = zoo::rollmean(
+      value,
+      k = 5,
+      fill = NA,
+      align = "center"
+    )
+  ) %>%
+  ungroup()
+```
+
+```{r}
+ma_stationarity <- ma_df %>%
+  group_by(ID) %>%
+  summarise(
+
+    adf_p_ma = tryCatch({
+
+      x <- na.omit(ma5)
+
+      if (length(x) < 20) {
+        return(NA_real_)
+      }
+
+      adf.test(x)$p.value
+
+    }, error = function(e) {
+      NA_real_
+    }),
+
+    is_stationary_ma =
+      adf_p_ma < 0.05,
+
+    .groups = "drop"
+  )
+
+ma_violations <- ma_stationarity %>%
+  filter(
+    is_stationary_ma == FALSE |
+      is.na(is_stationary_ma)
+  )
+```
+
+### 7.4.1 Visualize Remaining MA(5) Violations
+
+The series that remain nonstationary after the MA(5) stage are plotted with both the original signal and its smoothed version.
+
+```{r}
+ma_violation_df <- ma_df %>%
+  filter(
+    ID %in% ma_violations$ID
+  ) %>%
+  left_join(
+    ma_stationarity,
+    by = "ID"
+  )
+
+ids <- ma_violations$ID
+
+chunk_size <- 4
+
+id_chunks <- split(
+  ids,
+  ceiling(
+    seq_along(ids) / chunk_size
+  )
+)
+
+for (i in seq_along(id_chunks)) {
+
+  plot_data <- ma_df %>%
+    filter(
+      ID %in% id_chunks[[i]]
+    ) %>%
+    group_by(ID) %>%
+    mutate(
+      ma5 = zoo::rollmean(
+        value,
+        k = 5,
+        fill = NA,
+        align = "center"
+      )
+    ) %>%
+    ungroup()
+
+  p <- ggplot(
+    plot_data,
+    aes(day)
+  ) +
+    geom_line(
+      aes(y = value),
+      alpha = 0.3
+    ) +
+    geom_line(
+      aes(y = ma5),
+      linewidth = 1
+    ) +
+    facet_wrap(
+      ~ID,
+      scales = "free_y",
+      ncol = 2
+    ) +
+    labs(
+      title = paste(
+        "MA(5) Non-Stationary Violations — Page",
+        i
+      )
+    )
+
+  print(p)
+}
+```
+
+### 7.4.2 Double Moving Average: MA(5) → MA(10)
+
+The remaining nonstationary series are smoothed again using an MA(10) applied to the MA(5) signal. This is intended to further isolate slower-moving calibration behavior from
+short-term fluctuations.
+
+```{r}
+ma1_df <- long_df %>%
+  filter(
+    ID %in% ids
+  ) %>%
+  group_by(ID) %>%
+  arrange(day) %>%
+  mutate(
+    ma1 = zoo::rollmean(
+      value,
+      k = 5,
+      fill = NA,
+      align = "center"
+    )
+  ) %>%
+  ungroup()
+
+ma2_df <- ma1_df %>%
+  group_by(ID) %>%
+  arrange(day) %>%
+  mutate(
+    ma2 = zoo::rollmean(
+      ma1,
+      k = 10,
+      fill = NA,
+      align = "center"
+    )
+  ) %>%
+  ungroup()
+```
+
+### 7.4.3 Test Stationarity After Double Smoothing
+
+The MA(10)-on-MA(5) signal is tested using the ADF test.
+
+```{r}
+ma2_stationarity <- ma2_df %>%
+  group_by(ID) %>%
+  summarise(
+
+    adf_p_ma2 = tryCatch({
+
+      x <- na.omit(ma2)
+
+      if (length(x) < 20) {
+        return(NA_real_)
+      }
+
+      adf.test(x)$p.value
+
+    }, error = function(e) {
+      NA_real_
+    }),
+
+    is_stationary_ma2 =
+      adf_p_ma2 < 0.05,
+
+    .groups = "drop"
+  )
+```
+
+### 7.4.4 Summary of Double-Smoothing Results
+
+The proportion of the remaining series that become stationary after the second smoothing stage is calculated.
+
+```{r}
+ma2_summary <- ma2_stationarity %>%
+  summarise(
+    total = n(),
+    stationary_after_double_ma =
+      sum(
+        is_stationary_ma2,
+        na.rm = TRUE
+      ),
+    proportion =
+      stationary_after_double_ma / total
+  )
+
+ma2_summary
+```
+
+### 7.4.5 Visualize Double-Smoothing Results
+
+The original signal, MA(5), and MA(10)-on-MA(5) signals are plotted together.
+
+```{r}
+ids <- ids
+
+chunk_size <- 4
+
+id_chunks <- split(
+  ids,
+  ceiling(
+    seq_along(ids) / chunk_size
+  )
+)
+
+for (i in seq_along(id_chunks)) {
+
+  plot_data <- ma2_df %>%
+    filter(
+      ID %in% id_chunks[[i]]
+    ) %>%
+    arrange(
+      ID,
+      day
+    )
+
+  p <- ggplot(
+    plot_data,
+    aes(day)
+  ) +
+
+    geom_line(
+      aes(y = value),
+      alpha = 0.25
+    ) +
+
+    geom_line(
+      aes(y = ma1),
+      alpha = 0.6,
+      linewidth = 0.7
+    ) +
+
+    geom_line(
+      aes(y = ma2),
+      linewidth = 1.1,
+      color = "blue"
+    ) +
+
+    facet_wrap(
+      ~ID,
+      scales = "free_y",
+      ncol = 2
+    ) +
+
+    labs(
+      title = paste(
+        "Double Moving Average Analysis (MA5 → MA10) — Page",
+        i
+      ),
+      y = "Value"
+    )
+
+  print(p)
+}
+```
+
+### 7.4.6 Series Becoming Stationary After Double Smoothing
+
+The IDs that become stationary after the MA(5) → MA(10) process are isolated and visualized separately.
+
+```{r}
+ma10_stationary_ids <- ma2_stationarity %>%
+  filter(
+    is_stationary_ma2 == TRUE
+  ) %>%
+  pull(ID)
+
+ma10_plot_df <- ma2_df %>%
+  filter(
+    ID %in% ma10_stationary_ids
+  ) %>%
+  arrange(
+    ID,
+    day
+  )
+
+ids <- ma10_stationary_ids
+
+chunk_size <- 4
+
+id_chunks <- split(
+  ids,
+  ceiling(
+    seq_along(ids) / chunk_size
+  )
+)
+
+for (i in seq_along(id_chunks)) {
+
+  plot_data <- ma10_plot_df %>%
+    filter(
+      ID %in% id_chunks[[i]]
+    )
+
+  p <- ggplot(
+    plot_data,
+    aes(day)
+  ) +
+
+    geom_line(
+      aes(y = value),
+      alpha = 0.25
+    ) +
+
+    geom_line(
+      aes(y = ma1),
+      alpha = 0.6,
+      linewidth = 0.7
+    ) +
+
+    geom_line(
+      aes(y = ma2),
+      linewidth = 1.1,
+      color = "blue"
+    ) +
+
+    facet_wrap(
+      ~ID,
+      scales = "free_y",
+      ncol = 2
+    ) +
+
+    labs(
+      title = paste(
+        "Series Becoming Stationary After MA(5 → MA10) — Page",
+        i
+      ),
+      y = "Value"
+    )
+
+  print(p)
+}
+```
+
+## 7.5 Third Smoothing Stage: Summary of MA(5) → MA(10) → MA(4) Results
+
+The series that remain nonstationary after the first two smoothing stages are isolated. A final MA(4) is applied to the already smoothed MA(10)-on-MA(5) signal.
+
+```{r}
+remaining_ids <- ma2_stationarity %>%
+  filter(
+    is_stationary_ma2 == FALSE |
+      is.na(is_stationary_ma2)
+  ) %>%
+  pull(ID)
+
+ma3_df <- ma2_df %>%
+  filter(
+    ID %in% remaining_ids
+  ) %>%
+  group_by(ID) %>%
+  arrange(day) %>%
+  mutate(
+    ma3 = rollmean(
+      ma2,
+      k = 4,
+      fill = NA,
+      align = "center"
+    )
+  ) %>%
+  ungroup()
+```
+
+### 7.5.1 Test Stationarity After Third Smoothing
+
+The final smoothed signal is tested for stationarity using the ADF test.
+
+```{r}
+ma3_stationarity <- ma3_df %>%
+  group_by(ID) %>%
+  summarise(
+
+    adf_p_ma3 = tryCatch({
+
+      x <- na.omit(ma3)
+
+      if (length(x) < 20) {
+        return(NA_real_)
+      }
+
+      adf.test(x)$p.value
+
+    }, error = function(e) {
+      NA_real_
+    }),
+
+    is_stationary_ma3 =
+      adf_p_ma3 < 0.05,
+
+    .groups = "drop"
+  )
+```
+
+### 7.5.2 Visualize Progressive Smoothing
+
+The original signal and all three smoothed versions are displayed together: original, MA(5), MA(10) applied to MA(5), and MA(4) applied to the previous smoothed signal.
+
+```{r}
+ids <- remaining_ids
+
+chunk_size <- 4
+
+id_chunks <- split(
+  ids,
+  ceiling(
+    seq_along(ids) / chunk_size
+  )
+)
+
+for (i in seq_along(id_chunks)) {
+
+  plot_data <- ma3_df %>%
+    filter(
+      ID %in% id_chunks[[i]]
+    ) %>%
+    arrange(
+      ID,
+      day
+    )
+
+  p <- ggplot(
+    plot_data,
+    aes(day)
+  ) +
+
+    geom_line(
+      aes(y = value),
+      alpha = 0.2
+    ) +
+
+    geom_line(
+      aes(y = ma1),
+      alpha = 0.4
+    ) +
+
+    geom_line(
+      aes(y = ma2),
+      alpha = 0.7
+    ) +
+
+    geom_line(
+      aes(y = ma3),
+      linewidth = 1.1,
+      color = "darkred"
+    ) +
+
+    facet_wrap(
+      ~ID,
+      scales = "free_y",
+      ncol = 2
+    ) +
+
+    labs(
+      title = paste(
+        "Progressive MA Smoothing (5 → 10 → 4) — Page",
+        i
+      ),
+      y = "Value"
+    )
+
+  print(p)
+}
+```
+
+### 7.5.3 Summary of Third Smoothing Stage
+
+The number and proportion of remaining series that become stationary after the third smoothing stage are calculated.
+
+```{r}
+ma3_summary <- ma3_stationarity %>%
+  summarise(
+    total = n(),
+    stationary_after_ma3 =
+      sum(
+        is_stationary_ma3,
+        na.rm = TRUE
+      ),
+    proportion =
+      stationary_after_ma3 / total
+  )
+
+ma3_summary
+```
+\newpage
+
+# 8. Interpretation: Moving Toward a Calibration Threshold
+
+The progressive smoothing analysis is intended to determine whether the apparently nonstationary white-noise series contain an underlying, slowly changing calibration signal. If additional smoothing does not produce stationarity, the remaining variation may represent genuine long-term calibration behavior rather than short-term random noise.
+
+The next step is therefore to examine the residual error around the final smoothing approach rather than continuing to smooth indefinitely.
+
+## 8.1 Residual Analysis Around the MA(10) Signal
+
+For the remaining series, the residual is defined as: residual = observed value - smoothed value. The residual standard deviation and variance quantify the amount of short-term variation around the underlying smoothed signal. The range and 80th percentile of the smoothed signal are also calculated as potential measures of the operating calibration range.
+```{r}
+ma2_residual_df <- ma2_df %>%
+  mutate(
+    residual = value - ma2
+  )
+```
+```{r}
+residual_stats <- ma2_residual_df %>%
+  group_by(ID) %>%
+  summarise(
+
+
+    sd_residual =
+      sd(
+        residual,
+        na.rm = TRUE
+      ),
+
+
+    var_residual =
+      var(
+        residual,
+        na.rm = TRUE
+      ),
+
+
+    range_ma2 =
+      max(
+        ma2,
+        na.rm = TRUE
+      ) -
+      min(
+        ma2,
+        na.rm = TRUE
+      ),
+
+
+    p80_ma2 =
+      quantile(
+        ma2,
+        0.8,
+        na.rm = TRUE
+      ),
+
+
+    .groups = "drop"
+  )
+```
+
+## 8.2 Global Residual Statistics
+
+A population-level version of the residual statistics is also calculated. This provides an overall description of calibration variability rather than one statistic per ID.
+
+```{r}
+ma2_residual_df <- ma2_df %>%
+  mutate(
+    residual = value - ma2
+  ) %>%
+  filter(
+    !is.na(residual),
+    !is.na(ma2)
+  )
+
+
+global_stats <- ma2_residual_df %>%
+  summarise(
+
+
+    sd_residual_global =
+      sd(
+        residual,
+        na.rm = TRUE
+      ),
+
+
+    var_residual_global =
+      var(
+        residual,
+        na.rm = TRUE
+      ),
+
+
+    range_ma2_global =
+      max(
+        ma2,
+        na.rm = TRUE
+      ) -
+      min(
+        ma2,
+        na.rm = TRUE
+      ),
+
+
+    p80_ma2_global =
+      quantile(
+        ma2,
+        0.8,
+        na.rm = TRUE
+      )
+  )
+
+
+global_stats
+```
+
+## 8.3 Add Geographic Information to Residual Statistics
+
+The residual statistics are joined to the landmark metadata so that residual behavior can be examined geographically if needed.
+
+```{r}
+residual_stats_geo <- residual_stats %>%
+  left_join(
+    landmarks_subset,
+    by = "ID"
+  )
+```
+
+## 8.4 Residual Variability vs. Smoothed Calibration Range
+
+The relationship between the range of the smoothed calibration signal and residual standard deviation is visualized. This helps determine whether series with larger underlying calibration movement also tend to have greater short-term variability.
+
+```{r}
+ggplot(
+  residual_stats,
+  aes(
+    x = range_ma2,
+    y = sd_residual
+  )
+) +
+  geom_point() +
+  labs(
+    title = "Residual Variability vs Smoothed Trend Range",
+    x = "Range of MA(10 on MA(5))",
+    y = "Residual Standard Deviation"
+  )
+```
+
+## 8.5 Conservative Range Threshold
+
+The 80th percentile of the smoothed-value range is calculated. This is being explored as a potential conservative operating threshold for understanding how much the underlying calibration signal typically changes before a recalibration decision might be warranted.
+
+```{r}
+p80_range <- quantile(
+  residual_stats$range_ma2,
+  0.8,
+  na.rm = TRUE
+)
+
+
+p80_range
+```
+
+## 8.6 Visualize the 80th-Percentile Range Threshold
+
+The 80th-percentile range is added to the residual-versus-range plot as a vertical reference line.
+
+```{r}
+ggplot(
+  residual_stats,
+  aes(
+    x = range_ma2,
+    y = sd_residual
+  )
+) +
+  geom_point() +
+
+
+  geom_vline(
+    xintercept = p80_range,
+    color = "red",
+    linewidth = 1
+  ) +
+
+
+  annotate(
+    "text",
+    x = p80_range,
+    y = max(
+      residual_stats$sd_residual,
+      na.rm = TRUE
+    ),
+    label = "80th percentile",
+    color = "red",
+    hjust = -0.1
+  ) +
+  
+  labs(
+    title = "Residual Variability vs Smoothed Trend Range",
+    x = "Range of MA(10 on MA(5))",
+    y = "Residual Standard Deviation"
+  )
+```
+\newpage
+
+# 9. Next Analytical Question
+
+The analysis now provides the components needed to investigate a future recalibration rule:
+
+the underlying calibration behavior estimated through smoothing, short-term residual variability around that behavior, the amount of normal calibration movement, the distribution of calibration ranges, the stationary/nonstationary classification, and detected change points for unstable series.
+
+A proposed next step is to determine when the observed calibration behavior has moved far enough from its expected operating behavior to justify recalibration.
+
+For the nonstationary white-noise series, the current analysis suggests using the smoothed signal as an estimate of underlying behavior and the residual distribution as an estimate of normal short-term calibration variation.
+
+A conservative percentile such as the 75th or 80th percentile could then be evaluated as a candidate threshold. The appropriate percentile and the exact recalibration trigger still require validation against the actual calibration performance and desired false-alarm/recalibration tradeoff.
+
+For non-white-noise, nonstationary series, the next step is to investigate whether smoothing can reveal piecewise-stationary periods. Those periods can then be evaluated to determine when the calibration behavior changes enough to warrant recalibration.
