@@ -1,0 +1,1168 @@
+---
+title: "Calibration Comparison: 2024 vs. 2026"
+format: pdf
+editor: visual
+---
+
+```{r, echo = FALSE}
+knitr::opts_chunk$set(
+  warning = FALSE,
+  message = FALSE,
+  echo = FALSE,
+  include = TRUE
+)
+
+suppressPackageStartupMessages({
+  library(tidyverse)
+  library(cowplot)
+})
+```
+
+# Overview
+
+This report compares longitudinal calibration behavior between the 2024 and 2026 calibration datasets.
+
+The analysis reproduces the drift analysis originally developed for the 2024 calibration data. For each anchor, calibration is compared with its calibration on the first day of the observation period.
+
+Two measures of drift are examined:
+
+1. **Instantaneous drift:** the absolute proportional difference between an anchor's current calibration and its calibration on Day 0.
+2. **Maximum drift:** the largest instantaneous drift observed up to each point in time.
+
+The analysis also examines the number of anchors that exceed 1%, 2%, 5%, 10%, and 20% deviation thresholds.
+
+For the 2026 data, calendar dates are preserved throughout the analysis. Thus, the `days` variable represents actual elapsed calendar days rather than the number of calibration files retained after missing days were removed.
+
+\newpage
+
+# 1. Load 2024 Data
+
+The 2024 calibration data are read from individual CSV files. Each filename contains the calibration date, which is retained as the observation date.
+
+```{r}
+files_2024 <- list.files(
+  "calibration_outputs",
+  pattern = "^calibrations_probeData_2024-\\d{2}-\\d{2}\\.csv$",
+  full.names = TRUE
+) %>%
+  sort()
+
+# Extract dates from filenames
+dates_2024 <- as.Date(
+  stringr::str_extract(
+    basename(files_2024),
+    "\\d{4}-\\d{2}-\\d{2}"
+  )
+)
+
+# Read and combine files
+raw_2024 <- map_dfr(
+  seq_along(files_2024),
+  function(i) {
+
+    dat <- read_csv(
+      files_2024[i],
+      col_names = FALSE,
+      col_types = cols(
+        X1 = col_character(),
+        X2 = col_double()
+      ),
+      na = c("", "NA")
+    )
+
+    names(dat) <- c(
+      "id",
+      "calibration"
+    )
+
+    dat %>%
+      mutate(
+        date = dates_2024[i]
+      ) %>%
+      select(
+        date,
+        id,
+        calibration
+      )
+  }
+)
+
+head(raw_2024)
+```
+
+## 1.1 Calculate Calendar Days for 2024
+
+The first calibration date is treated as Day 0.
+
+```{r}
+raw_2024 <- raw_2024 %>%
+  filter(calibration > 0) %>%
+  mutate(
+    days = as.integer(
+      date - min(date)
+    )
+  )
+```
+
+Check the date range:
+
+```{r}
+data.frame(
+  first_date = min(raw_2024$date),
+  last_date = max(raw_2024$date),
+  calendar_days = max(raw_2024$days),
+  anchors = n_distinct(raw_2024$id)
+)
+```
+
+# 2. Load 2026 Data
+
+The 2026 data require the same cleaning procedure used in the primary calibration analysis.
+
+The calibration value is calculated as:
+
+[
+y = 100m + b
+]
+
+where (m) is the slope and (b) is the intercept.
+
+## 2.1 Locate the 2026 Calibration Files
+
+```{r}
+files_2026 <- list.files(
+  "26_Calibration",
+  pattern = "\\.csv$",
+  full.names = TRUE
+) %>%
+  sort()
+
+# Extract the actual calendar date from each filename
+dates_2026 <- as.Date(
+  stringr::str_extract(
+    basename(files_2026),
+    "\\d{4}-\\d{2}-\\d{2}"
+  )
+)
+
+# Check files and dates
+head(data.frame(
+  file = basename(files_2026),
+  date = dates_2026
+))
+```
+
+## 2.2 Remove Files with Insufficient Observations
+
+Calibration files containing fewer than 500 observations are excluded.
+
+The corresponding dates are removed at the same time so that the data and dates remain aligned.
+
+```{r}
+df_list_2026 <- lapply(
+  files_2026,
+  read.csv
+)
+
+keep_2026 <- sapply(
+  df_list_2026,
+  function(x) {
+    !is.null(x) && nrow(x) >= 500
+  }
+)
+
+df_list_2026 <- df_list_2026[keep_2026]
+dates_2026 <- dates_2026[keep_2026]
+files_2026 <- files_2026[keep_2026]
+
+head(data.frame(
+  file = basename(files_2026),
+  date = dates_2026
+))
+```
+
+# 3. Clean 2026 Calibration Data
+
+This is the cleaning function used in the primary 2026 analysis.
+
+```{r}
+clean_df <- function(df) {
+
+  stopifnot(ncol(df) >= 2)
+
+  # Preserve original column names as a data row
+  new_row <- as.data.frame(
+    t(colnames(df)),
+    stringsAsFactors = FALSE
+  )
+
+  colnames(new_row) <- colnames(df)
+
+  df <- rbind(
+    new_row,
+    df
+  )
+
+  # Remove leading character from first two fields
+  df[1, 1:2] <- sub(
+    "^.",
+    "",
+    df[1, 1:2]
+  )
+
+  # Standardize column names
+  df <- df %>%
+    rename(
+      col1 = 1,
+      col2 = 2
+    )
+
+  # Split slope and intercept
+  df <- separate(
+    df,
+    col2,
+    into = c("col2", "col3"),
+    sep = "b",
+    fill = "right"
+  )
+
+  # Convert to numeric
+  df$col1 <- suppressWarnings(
+    as.numeric(df$col1)
+  )
+
+  df$col2 <- suppressWarnings(
+    as.numeric(
+      gsub(
+        "[^0-9.-]",
+        "",
+        df$col2
+      )
+    )
+  )
+
+  df$col3 <- suppressWarnings(
+    as.numeric(
+      gsub(
+        "[^0-9.-]",
+        "",
+        df$col3
+      )
+    )
+  )
+
+  # Construct calibration value
+  df$col4 <- (
+    df$col2 * 100 +
+    df$col3
+  )
+
+  df
+}
+```
+
+Apply the cleaning function:
+
+```{r}
+df_list_2026 <- lapply(
+  df_list_2026,
+  clean_df
+)
+```
+
+# 4. Keep Anchors Common Across 2026 Files
+
+An anchor is retained if it appears in at least 80% of the available calibration files.
+
+```{r}
+col1_list_2026 <- lapply(
+  df_list_2026,
+  function(df) df$col1
+)
+
+id_counts_2026 <- table(
+  unlist(col1_list_2026)
+)
+
+threshold_2026 <- (
+  length(df_list_2026) * 0.8
+)
+
+common_vals_2026 <- names(
+  id_counts_2026[
+    id_counts_2026 >= threshold_2026
+  ]
+)
+
+df_list_2026 <- lapply(
+  df_list_2026,
+  function(df) {
+    df[
+      df$col1 %in% common_vals_2026,
+    ]
+  }
+)
+
+length(common_vals_2026)
+```
+
+# 5. Build the 2026 Longitudinal Dataset
+
+Only anchors with complete observations across all retained calibration dates are used in the final comparison.
+
+Importantly, the actual calendar dates are retained rather than replacing them with sequential day numbers.
+
+```{r}
+dfs_subset_2026 <- lapply(
+  df_list_2026,
+  function(d) {
+    d[, c("col1", "col4")]
+  }
+)
+
+dfs_subset_2026 <- Map(
+  function(d, date) {
+
+    colnames(d) <- c(
+      "id",
+      as.character(date)
+    )
+
+    d
+  },
+  dfs_subset_2026,
+  dates_2026
+)
+```
+
+Combine the daily datasets:
+
+```{r}
+result_2026 <- Reduce(
+  function(x, y) {
+    merge(
+      x,
+      y,
+      by = "id",
+      all = TRUE
+    )
+  },
+  dfs_subset_2026
+)
+```
+
+Keep only anchors with complete observations:
+
+```{r}
+complete_2026 <- result_2026[
+  complete.cases(
+    result_2026[, -1]
+  ),
+]
+```
+
+Convert to long format:
+
+```{r}
+long_2026 <- complete_2026 %>%
+  pivot_longer(
+    -id,
+    names_to = "date",
+    values_to = "calibration"
+  ) %>%
+  mutate(
+    date = as.Date(date)
+  )
+```
+
+Calculate calendar days from the first calibration date:
+
+```{r}
+long_2026 <- long_2026 %>%
+  group_by(id) %>%
+  arrange(
+    date,
+    .by_group = TRUE
+  ) %>%
+  mutate(
+    days = as.integer(
+      date - min(date)
+    )
+  ) %>%
+  ungroup()
+```
+
+Check the resulting 2026 dataset:
+
+```{r}
+data.frame(
+  first_date = min(long_2026$date),
+  last_date = max(long_2026$date),
+  calendar_days = max(long_2026$days),
+  calibration_days = n_distinct(long_2026$date),
+  anchors = n_distinct(long_2026$id)
+)
+```
+
+# 6. Calculate Drift
+
+The following calculation is intentionally equivalent to Zach's original 2024 analysis.
+
+For each anchor:
+
+$$[
+drift_t =
+\frac{|calibration_t-calibration_0|}
+{calibration_0}
+]$$
+
+```{r}
+cooked_2024 <- raw_2024 %>%
+  filter(calibration > 0) %>%
+  group_by(id) %>%
+  arrange(
+    date,
+    .by_group = TRUE
+  ) %>%
+  mutate(
+    drift = abs(
+      calibration - first(calibration)
+    ) / first(calibration),
+
+    max.drift = cummax(drift)
+  ) %>%
+  ungroup()
+```
+
+And for 2026:
+
+```{r}
+cooked_2026 <- long_2026 %>%
+  filter(calibration > 0) %>%
+  group_by(id) %>%
+  arrange(
+    date,
+    .by_group = TRUE
+  ) %>%
+  mutate(
+    drift = abs(
+      calibration - first(calibration)
+    ) / first(calibration),
+
+    max.drift = cummax(drift)
+  ) %>%
+  ungroup()
+```
+
+# 7. Dataset Summary
+
+Before comparing the plots, check the size and temporal coverage of each dataset.
+
+```{r}
+comparison_summary <- bind_rows(
+  cooked_2024 %>%
+    summarise(
+      year = "2024",
+      anchors = n_distinct(id),
+      observations = n(),
+      first_date = min(date),
+      last_date = max(date),
+      calendar_days = max(days)
+    ),
+
+  cooked_2026 %>%
+    summarise(
+      year = "2026",
+      anchors = n_distinct(id),
+      observations = n(),
+      first_date = min(date),
+      last_date = max(date),
+      calendar_days = max(days)
+    )
+)
+
+comparison_summary
+```
+
+# 8. Maximum Drift
+
+## 8.1 2024
+
+```{r}
+ggplot(
+  cooked_2024,
+  aes(
+    x = days,
+    y = max.drift,
+    colour = id,
+    group = id
+  )
+) +
+  geom_step(
+    alpha = 0.06,
+    linewidth = 0.4
+  ) +
+  guides(color = "none") +
+  labs(
+    title = "2024 Maximum Calibration Drift",
+    x = "Calendar days since first calibration",
+    y = "Maximum deviation from Day 0"
+  ) +
+  scale_y_continuous(
+    labels = scales::percent_format(
+      accuracy = 1
+    )
+  ) +
+  theme_minimal()
+```
+
+## 8.2 2026
+
+```{r}
+ggplot(
+  cooked_2026,
+  aes(
+    x = days,
+    y = max.drift,
+    colour = id,
+    group = id
+  )
+) +
+  geom_step(
+    alpha = 0.06,
+    linewidth = 0.4
+  ) +
+  guides(color = "none") +
+  labs(
+    title = "2026 Maximum Calibration Drift",
+    x = "Calendar days since first calibration",
+    y = "Maximum deviation from Day 0"
+  ) +
+  scale_y_continuous(
+    labels = scales::percent_format(
+      accuracy = 1
+    )
+  ) +
+  theme_minimal()
+```
+
+# 9. Instantaneous Drift
+
+## 9.1 2024
+
+```{r}
+ggplot(
+  cooked_2024,
+  aes(
+    x = days,
+    y = drift,
+    colour = id,
+    group = id
+  )
+) +
+  geom_step(
+    alpha = 0.06,
+    linewidth = 0.4
+  ) +
+  guides(color = "none") +
+  labs(
+    title = "2024 Instantaneous Calibration Drift",
+    x = "Calendar days since first calibration",
+    y = "Deviation from Day 0"
+  ) +
+  scale_y_continuous(
+    labels = scales::percent_format(
+      accuracy = 1
+    )
+  ) +
+  theme_minimal()
+```
+
+## 9.2 2026
+
+```{r}
+ggplot(
+  cooked_2026,
+  aes(
+    x = days,
+    y = drift,
+    colour = id,
+    group = id
+  )
+) +
+  geom_step(
+    alpha = 0.06,
+    linewidth = 0.4
+  ) +
+  guides(color = "none") +
+  labs(
+    title = "2026 Instantaneous Calibration Drift",
+    x = "Calendar days since first calibration",
+    y = "Deviation from Day 0"
+  ) +
+  scale_y_continuous(
+    labels = scales::percent_format(
+      accuracy = 1
+    )
+  ) +
+  theme_minimal()
+```
+
+\newpage
+
+# 10. Maximum Drift Threshold Analysis
+
+The thresholds are the same as those used in Zach's analysis:
+
+* 1%
+* 2%
+* 5%
+* 10%
+* 20%
+
+```{r}
+thresholds <- c(
+  0.01,
+  0.02,
+  0.05,
+  0.10,
+  0.20
+)
+
+thresholds.pct <- c(
+  "1%",
+  "2%",
+  "5%",
+  "10%",
+  "20%"
+)
+```
+
+## 10.1 2024
+
+```{r}
+drift.proportion_2024 <- (
+  crossing(
+    cooked_2024,
+    threshold = thresholds
+  )
+  |> group_by(
+    threshold,
+    days
+  )
+  |> summarise(
+    drifted.above = sum(
+      max.drift > threshold
+    ),
+    .groups = "drop"
+  )
+  |> mutate(
+    threshold = ordered(
+      threshold,
+      levels = thresholds,
+      labels = thresholds.pct
+    )
+  )
+)
+```
+
+```{r}
+ggplot(
+  drift.proportion_2024,
+  aes(
+    x = days,
+    y = drifted.above,
+    colour = threshold,
+    group = threshold
+  )
+) +
+  geom_step(linewidth = 1) +
+  scale_x_continuous(
+    "Calendar days since first calibration",
+    limits = c(
+      0,
+      max(cooked_2024$days)
+    ),
+    breaks = seq(
+      0,
+      max(cooked_2024$days),
+      by = 7
+    )
+  ) +
+  scale_y_continuous(
+    "# anchors drifted past threshold",
+    limits = c(
+      0,
+      n_distinct(cooked_2024$id)
+    )
+  ) +
+  scale_colour_manual(
+    "Threshold",
+    values = c(
+      "1%" = "#0868ac",
+      "2%" = "#43a2ca",
+      "5%" = "#7bccc4",
+      "10%" = "#8c96c6",
+      "20%" = "#8856a7"
+    )
+  ) +
+  labs(
+    title = "2024: Anchors Ever Exceeding Drift Threshold"
+  ) +
+  theme_minimal()
+```
+
+## 10.2 2026
+
+```{r}
+drift.proportion_2026 <- (
+  crossing(
+    cooked_2026,
+    threshold = thresholds
+  )
+  |> group_by(
+    threshold,
+    days
+  )
+  |> summarise(
+    drifted.above = sum(
+      max.drift > threshold
+    ),
+    .groups = "drop"
+  )
+  |> mutate(
+    threshold = ordered(
+      threshold,
+      levels = thresholds,
+      labels = thresholds.pct
+    )
+  )
+)
+```
+
+```{r}
+ggplot(
+  drift.proportion_2026,
+  aes(
+    x = days,
+    y = drifted.above,
+    colour = threshold,
+    group = threshold
+  )
+) +
+  geom_step(linewidth = 1) +
+  scale_x_continuous(
+    "Calendar days since first calibration",
+    limits = c(
+      0,
+      max(cooked_2026$days)
+    ),
+    breaks = seq(
+      0,
+      max(cooked_2026$days),
+      by = 7
+    )
+  ) +
+  scale_y_continuous(
+    "# anchors drifted past threshold",
+    limits = c(
+      0,
+      n_distinct(cooked_2026$id)
+    )
+  ) +
+  scale_colour_manual(
+    "Threshold",
+    values = c(
+      "1%" = "#0868ac",
+      "2%" = "#43a2ca",
+      "5%" = "#7bccc4",
+      "10%" = "#8c96c6",
+      "20%" = "#8856a7"
+    )
+  ) +
+  labs(
+    title = "2026: Anchors Ever Exceeding Drift Threshold"
+  ) +
+  theme_minimal()
+```
+
+# 11. Instantaneous Drift Threshold Analysis
+
+This analysis counts the number of anchors that are currently beyond each threshold, rather than the number that have ever exceeded it.
+
+## 11.1 2024
+
+```{r}
+drift.proportion.2_2024 <- (
+  crossing(
+    cooked_2024,
+    threshold = thresholds
+  )
+  |> group_by(
+    threshold,
+    days
+  )
+  |> summarise(
+    drifted.above = sum(
+      drift > threshold
+    ),
+    .groups = "drop"
+  )
+  |> mutate(
+    threshold = ordered(
+      threshold,
+      levels = thresholds,
+      labels = thresholds.pct
+    )
+  )
+)
+```
+
+```{r}
+ggplot(
+  drift.proportion.2_2024,
+  aes(
+    x = days,
+    y = drifted.above,
+    colour = threshold,
+    group = threshold
+  )
+) +
+  geom_step(linewidth = 1) +
+  scale_x_continuous(
+    "Calendar days since first calibration",
+    limits = c(
+      0,
+      max(cooked_2024$days)
+    ),
+    breaks = seq(
+      0,
+      max(cooked_2024$days),
+      by = 7
+    )
+  ) +
+  scale_y_continuous(
+    "# anchors currently past threshold",
+    limits = c(
+      0,
+      n_distinct(cooked_2024$id)
+    )
+  ) +
+  scale_colour_manual(
+    "Threshold",
+    values = c(
+      "1%" = "#0868ac",
+      "2%" = "#43a2ca",
+      "5%" = "#7bccc4",
+      "10%" = "#8c96c6",
+      "20%" = "#8856a7"
+    )
+  ) +
+  labs(
+    title = "2024: Anchors Currently Exceeding Drift Threshold"
+  ) +
+  theme_minimal()
+```
+
+## 11.2 2026
+
+```{r}
+drift.proportion.2_2026 <- (
+  crossing(
+    cooked_2026,
+    threshold = thresholds
+  )
+  |> group_by(
+    threshold,
+    days
+  )
+  |> summarise(
+    drifted.above = sum(
+      drift > threshold
+    ),
+    .groups = "drop"
+  )
+  |> mutate(
+    threshold = ordered(
+      threshold,
+      levels = thresholds,
+      labels = thresholds.pct
+    )
+  )
+)
+```
+
+```{r}
+ggplot(
+  drift.proportion.2_2026,
+  aes(
+    x = days,
+    y = drifted.above,
+    colour = threshold,
+    group = threshold
+  )
+) +
+  geom_step(linewidth = 1) +
+  scale_x_continuous(
+    "Calendar days since first calibration",
+    limits = c(
+      0,
+      max(cooked_2026$days)
+    ),
+    breaks = seq(
+      0,
+      max(cooked_2026$days),
+      by = 7
+    )
+  ) +
+  scale_y_continuous(
+    "# anchors currently past threshold",
+    limits = c(
+      0,
+      n_distinct(cooked_2026$id)
+    )
+  ) +
+  scale_colour_manual(
+    "Threshold",
+    values = c(
+      "1%" = "#0868ac",
+      "2%" = "#43a2ca",
+      "5%" = "#7bccc4",
+      "10%" = "#8c96c6",
+      "20%" = "#8856a7"
+    )
+  ) +
+  labs(
+    title = "2026: Anchors Currently Exceeding Drift Threshold"
+  ) +
+  theme_minimal()
+```
+
+\newpage
+
+# 12. Direct 2024 vs. 2026 Comparison
+
+For direct comparison, it is useful to put both years onto the same plot.
+
+Because the datasets contain different numbers of anchors, percentages are more informative than raw counts.
+
+## 12.1 Maximum Drift: Percentage of Anchors
+
+```{r}
+max_drift_comparison <- bind_rows(
+
+  cooked_2024 %>%
+    group_by(days) %>%
+    summarise(
+      anchors = n_distinct(id),
+      .groups = "drop"
+    ),
+
+  cooked_2026 %>%
+    group_by(days) %>%
+    summarise(
+      anchors = n_distinct(id),
+      .groups = "drop"
+    )
+)
+```
+
+For the threshold comparison:
+
+```{r}
+max_threshold_comparison <- bind_rows(
+
+  crossing(
+    cooked_2024,
+    threshold = thresholds
+  ) %>%
+    group_by(
+      days,
+      threshold
+    ) %>%
+    summarise(
+      drifted.above = sum(
+        max.drift > threshold
+      ),
+      total = n_distinct(id),
+      .groups = "drop"
+    ) %>%
+    mutate(
+      year = "2024",
+      proportion = drifted.above / total
+    ),
+
+  crossing(
+    cooked_2026,
+    threshold = thresholds
+  ) %>%
+    group_by(
+      days,
+      threshold
+    ) %>%
+    summarise(
+      drifted.above = sum(
+        max.drift > threshold
+      ),
+      total = n_distinct(id),
+      .groups = "drop"
+    ) %>%
+    mutate(
+      year = "2026",
+      proportion = drifted.above / total
+    )
+) %>%
+  mutate(
+    threshold = factor(
+      threshold,
+      levels = thresholds,
+      labels = thresholds.pct
+    )
+  )
+```
+
+Plot:
+
+```{r}
+ggplot(
+  max_threshold_comparison,
+  aes(
+    x = days,
+    y = proportion,
+    colour = year,
+    linetype = year
+  )
+) +
+  geom_step(linewidth = 1) +
+  facet_wrap(
+    ~ threshold,
+    ncol = 1
+  ) +
+  scale_y_continuous(
+    "Proportion of anchors",
+    labels = scales::percent_format(
+      accuracy = 1
+    )
+  ) +
+  scale_colour_manual(
+    values = c(
+      "2024" = "#0868ac",
+      "2026" = "#d95f02"
+    )
+  ) +
+  labs(
+    title = "Maximum Calibration Drift: 2024 vs. 2026",
+    x = "Calendar days since first calibration",
+    colour = "Year",
+    linetype = "Year"
+  ) +
+  theme_minimal()
+```
+
+# 13. Instantaneous Drift: Percentage of Anchors
+
+```{r}
+instantaneous_threshold_comparison <- bind_rows(
+
+  crossing(
+    cooked_2024,
+    threshold = thresholds
+  ) %>%
+    group_by(
+      days,
+      threshold
+    ) %>%
+    summarise(
+      drifted.above = sum(
+        drift > threshold
+      ),
+      total = n_distinct(id),
+      .groups = "drop"
+    ) %>%
+    mutate(
+      year = "2024",
+      proportion = drifted.above / total
+    ),
+
+  crossing(
+    cooked_2026,
+    threshold = thresholds
+  ) %>%
+    group_by(
+      days,
+      threshold
+    ) %>%
+    summarise(
+      drifted.above = sum(
+        drift > threshold
+      ),
+      total = n_distinct(id),
+      .groups = "drop"
+    ) %>%
+    mutate(
+      year = "2026",
+      proportion = drifted.above / total
+    )
+) %>%
+  mutate(
+    threshold = factor(
+      threshold,
+      levels = thresholds,
+      labels = thresholds.pct
+    )
+  )
+```
+
+```{r}
+ggplot(
+  instantaneous_threshold_comparison,
+  aes(
+    x = days,
+    y = proportion,
+    colour = year,
+    linetype = year
+  )
+) +
+  geom_step(linewidth = 1) +
+  facet_wrap(
+    ~ threshold,
+    ncol = 1
+  ) +
+  scale_y_continuous(
+    "Proportion of anchors",
+    labels = scales::percent_format(
+      accuracy = 1
+    )
+  ) +
+  scale_colour_manual(
+    values = c(
+      "2024" = "#0868ac",
+      "2026" = "#d95f02"
+    )
+  ) +
+  labs(
+    title = "Instantaneous Calibration Drift: 2024 vs. 2026",
+    x = "Calendar days since first calibration",
+    colour = "Year",
+    linetype = "Year"
+  ) +
+  theme_minimal()
+```
+
+# 14. Notes for Interpretation
+
+The maximum-drift plots measure whether an anchor has **ever** departed from its initial calibration by a given amount. Consequently, these curves can only increase or remain constant.
+
+The instantaneous-drift plots measure how many anchors are **currently** beyond each threshold. These curves can increase or decrease as anchors move back toward their initial calibration.
+
+A pattern in which maximum drift increases over time while instantaneous drift remains approximately stable would suggest that individual anchors experience deviations but that the overall population does not undergo a systematic accumulation of drift.
+
+The 2024 and 2026 comparisons should be interpreted using calendar time. Missing calibration dates in the 2026 dataset remain gaps in the time axis rather than being compressed into consecutive observation numbers.
+
+
+### One thing I'd particularly recommend
+
+The **last two plots** in this QMD are probably the most useful for your actual comparison. They put 2024 and 2026 on the **same percentage scale**, so the fact that you have 444 complete anchors in 2026 versus a different number in 2024 doesn't distort the comparison.
+
+Also, this version fixes an important issue from the earlier approach: **the 2026 x-axis is based on the dates in the filenames all the way through the analysis**. If, for example, 18 calendar days were omitted, those 18 days still occupy space on the x-axis.
+
