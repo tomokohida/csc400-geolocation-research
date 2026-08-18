@@ -39,7 +39,7 @@ For the 2026 data, calendar dates are preserved throughout the analysis. Thus, t
 
 # 1. Load 2024 Data
 
-The 2024 calibration data are read from individual CSV files. Each filename contains the calibration date, which is retained as the observation date.
+The 2024 calibration data are read from individual CSV files. Each filename contains the date of retrieval, which is retained as the observation date, alongside the pre-computed calibration value.
 
 ```{r}
 files_2024 <- list.files(
@@ -89,12 +89,8 @@ raw_2024 <- map_dfr(
   }
 )
 
-head(raw_2024)
+# head(raw_2024)
 ```
-
-## 1.1 Calculate Calendar Days for 2024
-
-The first calibration date is treated as Day 0.
 
 ```{r}
 raw_2024 <- raw_2024 %>%
@@ -106,30 +102,26 @@ raw_2024 <- raw_2024 %>%
   )
 ```
 
-Check the date range:
-
 ```{r}
-data.frame(
-  first_date = min(raw_2024$date),
-  last_date = max(raw_2024$date),
-  calendar_days = max(raw_2024$days),
-  anchors = n_distinct(raw_2024$id)
-)
+# Check the date range
+# data.frame(
+#   first_date = min(raw_2024$date),
+#   last_date = max(raw_2024$date),
+#   calendar_days = max(raw_2024$days),
+#   anchors = n_distinct(raw_2024$id)
+# )
 ```
 
 # 2. Load 2026 Data
 
-The 2026 data require the same cleaning procedure used in the primary calibration analysis.
+The 2026 data requires us to calculate calibration value via given slope and intercept values.
 
 The calibration value is calculated as:
-
-[
+$$
 y = 100m + b
-]
+$$
 
 where (m) is the slope and (b) is the intercept.
-
-## 2.1 Locate the 2026 Calibration Files
 
 ```{r}
 files_2026 <- list.files(
@@ -148,19 +140,15 @@ dates_2026 <- as.Date(
 )
 
 # Check files and dates
-head(data.frame(
-  file = basename(files_2026),
-  date = dates_2026
-))
+# head(data.frame(
+#   file = basename(files_2026),
+#   date = dates_2026
+# ))
 ```
 
-## 2.2 Remove Files with Insufficient Observations
-
-Calibration files containing fewer than 500 observations are excluded.
-
-The corresponding dates are removed at the same time so that the data and dates remain aligned.
-
 ```{r}
+# Calibration files containing fewer than 500 observations are excluded + corresponding dates removed
+
 df_list_2026 <- lapply(
   files_2026,
   read.csv
@@ -177,17 +165,14 @@ df_list_2026 <- df_list_2026[keep_2026]
 dates_2026 <- dates_2026[keep_2026]
 files_2026 <- files_2026[keep_2026]
 
-head(data.frame(
-  file = basename(files_2026),
-  date = dates_2026
-))
+# head(data.frame(
+#   file = basename(files_2026),
+#   date = dates_2026
+# ))
 ```
 
-# 3. Clean 2026 Calibration Data
-
-This is the cleaning function used in the primary 2026 analysis.
-
 ```{r}
+# cleaning function
 clean_df <- function(df) {
 
   stopifnot(ncol(df) >= 2)
@@ -258,25 +243,21 @@ clean_df <- function(df) {
     df$col2 * 100 +
     df$col3
   )
-
   df
 }
 ```
 
-Apply the cleaning function:
-
 ```{r}
+# Apply the cleaning function:
+
 df_list_2026 <- lapply(
   df_list_2026,
   clean_df
 )
 ```
 
-# 4. Keep Anchors Common Across 2026 Files
-
-An anchor is retained if it appears in at least 80% of the available calibration files.
-
 ```{r}
+# An anchor is retained if it appears in at least 80% of the available calibration files
 col1_list_2026 <- lapply(
   df_list_2026,
   function(df) df$col1
@@ -305,14 +286,8 @@ df_list_2026 <- lapply(
   }
 )
 
-length(common_vals_2026)
+# length(common_vals_2026)
 ```
-
-# 5. Build the 2026 Longitudinal Dataset
-
-Only anchors with complete observations across all retained calibration dates are used in the final comparison.
-
-Importantly, the actual calendar dates are retained rather than replacing them with sequential day numbers.
 
 ```{r}
 dfs_subset_2026 <- lapply(
@@ -337,9 +312,8 @@ dfs_subset_2026 <- Map(
 )
 ```
 
-Combine the daily datasets:
-
 ```{r}
+# Combine the daily datasets
 result_2026 <- Reduce(
   function(x, y) {
     merge(
@@ -353,9 +327,8 @@ result_2026 <- Reduce(
 )
 ```
 
-Keep only anchors with complete observations:
-
 ```{r}
+# Keep only anchors with complete observations
 complete_2026 <- result_2026[
   complete.cases(
     result_2026[, -1]
@@ -363,9 +336,8 @@ complete_2026 <- result_2026[
 ]
 ```
 
-Convert to long format:
-
 ```{r}
+# Convert to long format
 long_2026 <- complete_2026 %>%
   pivot_longer(
     -id,
@@ -377,9 +349,8 @@ long_2026 <- complete_2026 %>%
   )
 ```
 
-Calculate calendar days from the first calibration date:
-
 ```{r}
+# Calculate calendar days from the first calibration date
 long_2026 <- long_2026 %>%
   group_by(id) %>%
   arrange(
@@ -394,29 +365,16 @@ long_2026 <- long_2026 %>%
   ungroup()
 ```
 
-Check the resulting 2026 dataset:
-
 ```{r}
-data.frame(
-  first_date = min(long_2026$date),
-  last_date = max(long_2026$date),
-  calendar_days = max(long_2026$days),
-  calibration_days = n_distinct(long_2026$date),
-  anchors = n_distinct(long_2026$id)
-)
+# Check resulting 2026 dataset
+# data.frame(
+#   first_date = min(long_2026$date),
+#   last_date = max(long_2026$date),
+#   calendar_days = max(long_2026$days),
+#   calibration_days = n_distinct(long_2026$date),
+#   anchors = n_distinct(long_2026$id)
+# )
 ```
-
-# 6. Calculate Drift
-
-The following calculation is intentionally equivalent to Zach's original 2024 analysis.
-
-For each anchor:
-
-$$[
-drift_t =
-\frac{|calibration_t-calibration_0|}
-{calibration_0}
-]$$
 
 ```{r}
 cooked_2024 <- raw_2024 %>%
@@ -436,9 +394,8 @@ cooked_2024 <- raw_2024 %>%
   ungroup()
 ```
 
-And for 2026:
-
 ```{r}
+# for 2026:
 cooked_2026 <- long_2026 %>%
   filter(calibration > 0) %>%
   group_by(id) %>%
@@ -456,7 +413,11 @@ cooked_2026 <- long_2026 %>%
   ungroup()
 ```
 
-# 7. Dataset Summary
+# 3. Dataset Summary
+
+* Only anchors with complete observations across all retained calibration dates are used in the final comparison.
+
+* The actual calendar dates are retained rather than replacing them with sequential day numbers.
 
 ```{r}
 # Before comparing the plots, check the size and temporal coverage of each dataset.
@@ -483,8 +444,20 @@ comparison_summary <- bind_rows(
     )
 )
 
-comparison_summary
+kable(comparison_summary)
 ```
+# 4. Calculate Drift
+
+The following calculation is intentionally equivalent to Zach's original 2024 analysis.
+
+For each anchor:
+
+$$[
+drift_t =
+\frac{|calibration_t-calibration_0|}
+{calibration_0}
+]$$
+
 \newpage
 ```{r}
 ggplot(
