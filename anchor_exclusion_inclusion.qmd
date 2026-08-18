@@ -2,8 +2,9 @@
 title: "Anchor Representation: 2024 vs. 2026"
 format: pdf
 editor: visual
+author: "Tomoko Hida"
 ---
-```{r, echo=FALSE}
+```{r, echo=FALSE, warning = FALSE, message = FALSE}
 knitr::opts_chunk$set(
   warning = FALSE,
   message = FALSE,
@@ -12,6 +13,7 @@ knitr::opts_chunk$set(
 
 suppressPackageStartupMessages({
   library(tidyverse)
+  library(kableExtra)
 })
 ```
 
@@ -21,14 +23,14 @@ This report compares anchor representation between the 2024 and 2026 calibration
 
 The purpose is to determine which anchors were sufficiently represented in each calibration period and which anchors were excluded because they did not meet the representation criterion.
 
-For **both 2024 and 2026**, an anchor is considered sufficiently represented if it appears in at least **80% of the available calibration files**.
+For both 2024 and 2026, an anchor is considered sufficiently represented if it appears in at least 80% of the available calibration files.
 
 This analysis distinguishes between:
 
-* anchors retained in both analyses;
-* anchors retained in 2024 but not 2026;
-* anchors retained in 2026 but not 2024;
-* anchors that appeared in the raw data but were excluded from both analyses.
+* anchors retained in both analyses
+* anchors retained in 2024 but not 2026
+* anchors retained in 2026 but not 2024
+* anchors that appeared in the raw data but were excluded from both analyses
 
 \newpage
 
@@ -332,7 +334,6 @@ n26only <- nrow(retained_2026_only)
 ```
 
 `r n26only` met the 80% criterion in 2026 but did not meet it in 2024.
----
 
 ## 3.4 All Raw Anchors Observed in 2024
 
@@ -397,11 +398,13 @@ excluded_both <- tibble(
 nexclude2426 <- nrow(excluded_both)
 ```
 
-Number excluded from both: `r nexclude2426`
+Unique anchors excluded from both: `r nexclude2426`
 
----
+\newpage
 
-# 4. Excluded Anchors
+# 4. Anchor Representation Summaries
+
+## 4.2 Anchor Retention Results
 
 ```{r}
 # excluded from both, present in both raw datasets
@@ -437,9 +440,8 @@ excluded_2026_only_raw <- excluded_both %>%
 # nexcluderaw26 <- nrow(excluded_2026_only_raw)
 ```
 
-The following table combines the representation information for every anchor observed in either year.
-
 ```{r}
+# this table combines information for every anchor observed in either 24 or 26
 representation_comparison <- full_join(
   anchor_counts_2024 %>%
     select(
@@ -508,13 +510,8 @@ representation_comparison <- full_join(
     classification,
     id
   )
-
-representation_comparison
+# representation_comparison
 ```
-
----
-
-# 17. Summary of Anchor Classification
 
 ```{r}
 classification_summary <- representation_comparison %>%
@@ -526,14 +523,8 @@ classification_summary <- representation_comparison %>%
     desc(number_of_anchors)
   )
 
-classification_summary
+#kable(classification_summary)
 ```
-
----
-
-# 18. Summary Table for the Report
-
-A more compact summary is useful for reporting the results.
 
 ```{r}
 final_summary <- tibble(
@@ -556,33 +547,23 @@ final_summary <- tibble(
   )
 )
 
-final_summary
+#kable(final_summary)
 ```
-
----
-
-# 19. Representation Percentages
-
-The following calculates the percentage of all anchors observed in either raw dataset that fall into each category.
 
 ```{r}
 final_summary_percentage <- final_summary %>%
   mutate(
-    percentage_of_all_observed =
+    "% of all observed" =
       number_of_anchors /
       length(all_raw_anchors)
   )
 
-final_summary_percentage
+kable(final_summary_percentage)
 ```
 
----
-
-# 20. Compare 80% Representation Rates
-
-This table summarizes the number of anchors observed in each year and the number that passed the 80% criterion.
-
 ```{r}
+# redundant so exclude
+# comparing 80% representation rates
 representation_rates <- tibble(
 
   year = c(
@@ -616,16 +597,11 @@ representation_rates <- tibble(
       retained_80pct / raw_anchors
   )
 
-representation_rates
+# representation_rates
 ```
 
----
-
-# 21. Anchors Retained in One Year but Not the Other
-
-This table is particularly useful for identifying changes in anchor availability between calibration campaigns.
-
 ```{r}
+# Anchors retained in one year but not the other
 year_specific_anchors <- bind_rows(
 
   retained_2024_only %>%
@@ -643,16 +619,11 @@ year_specific_anchors <- bind_rows(
     id
   )
 
-year_specific_anchors
+# head(year_specific_anchors)
 ```
 
----
-
-# 22. Anchors Excluded from Both but Observed in Either Dataset
-
-This is the group of anchors that may be particularly useful for investigating why anchors failed the representation criterion.
-
 ```{r}
+# anchors excluded entirely but observed in either or both raw data
 excluded_from_both_detailed <- representation_comparison %>%
   filter(
     classification %in% c(
@@ -676,16 +647,12 @@ excluded_from_both_detailed <- representation_comparison %>%
     id
   )
 
-excluded_from_both_detailed
+# head(excluded_from_both_detailed)
 ```
 
----
+## 4.2 Most Poorly Represented Anchors
 
-# 23. Most Poorly Represented Anchors
-
-The following table identifies anchors with the lowest representation in either year.
-
-This can help identify anchors that were particularly intermittent.
+The following identifies anchors with the lowest representation in either year; only the first 6 of 65 rows are printed.
 
 ```{r}
 poorly_represented <- representation_comparison %>%
@@ -719,18 +686,18 @@ poorly_represented <- representation_comparison %>%
     minimum_representation,
     id
   )
-
-head(
-  poorly_represented,
-  50
-)
+kable(head(poorly_represented))
 ```
 
----
+## 4.3 Final Interpretation
 
-# 24. Export Results
+1. **Stable/repeated anchors:** retained in both 2024 and 2026 analyses
+2. **Year-specific anchors:** retained in one calibration period but not the other
+3. **Intermittent anchors:** observed in the raw data but excluded entirely
 
-The major results are written to CSV files so they can be examined outside of the PDF report.
+The "Intermittent anchors" group represents anchors with consistent changes in anchor availability, connectivity, or geographic coverage. In order to reduce computational overhead and accuracy, a first step may be to exclude these anchors as input to our geolocation algorithm.
+
+## 4.4 CSVs of Results
 
 ```{r}
 write_csv(
@@ -772,24 +739,14 @@ write_csv(
   excluded_2026_only_raw,
   "anchors_excluded_both_2026_only.csv"
 )
-```
 
----
+write_csv(
+  excluded_from_both_detailed,
+  "excluded_from_both_detailed.csv"
+)
 
-# 25. Final Interpretation
-
-The 80% representation criterion is applied independently to the two calibration periods.
-
-An anchor retained in 2024 therefore appeared in at least 80% of the available 2024 calibration files, while an anchor retained in 2026 appeared in at least 80% of the usable 2026 calibration files.
-
-The comparison separates three scientifically distinct groups:
-
-1. **Stable/repeated anchors:** retained in both 2024 and 2026.
-2. **Year-specific anchors:** retained in one calibration period but not the other.
-3. **Intermittent anchors:** observed in the raw data but excluded because they failed the 80% representation criterion.
-
-The final group can be particularly informative because failure to meet the 80% criterion may itself reflect changes in anchor availability, connectivity, geographic coverage, or other properties of the calibration system.
-
-```{r}
-final_summary
+write_csv(
+  poorly_represented,
+  "poorly_represented.csv"
+)
 ```
