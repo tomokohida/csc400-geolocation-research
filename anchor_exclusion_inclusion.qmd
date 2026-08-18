@@ -18,7 +18,6 @@ suppressPackageStartupMessages({
 ```
 
 # Overview
-
 This report compares anchor representation between the 2024 and 2026 calibration datasets.
 
 The purpose is to determine which anchors were sufficiently represented in each calibration period and which anchors were excluded because they did not meet the representation criterion.
@@ -90,9 +89,9 @@ raw_ids_2024 <- raw_ids_2024 %>%
 
 ```{r}
 n_files_2024 <- length(files_2024)
-
 threshold_2024 <- 0.80 * n_files_2024
 ```
+
 ```{r}
 # Count the number of files containing each anchor
 anchor_counts_2024 <- raw_ids_2024 %>%
@@ -144,7 +143,6 @@ files_2026 <- list.files(
 
 len26 <- length(files_2026)
 ```
-
 
 ## 2.1 Load 2026 Files
 

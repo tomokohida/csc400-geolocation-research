@@ -4,7 +4,6 @@ format: pdf
 editor: visual
 author: "Tomoko Hida"
 ---
-
 ```{r, echo = FALSE, warning=FALSE, message=FALSE}
 knitr::opts_chunk$set(
   warning = FALSE,
@@ -20,6 +19,89 @@ suppressPackageStartupMessages({
 })
 ```
 
+```{r}
+files_2024 <- list.files(
+  "calibration_outputs",
+  pattern = "^calibrations_probeData_2024-\\d{2}-\\d{2}\\.csv$",
+  full.names = TRUE
+) %>%
+  sort()
+
+len24 <- length(files_2024)
+```
+
+```{r}
+raw_ids_2024 <- map_dfr(
+  seq_along(files_2024),
+  function(i) {
+
+    dat <- read_csv(
+      files_2024[i],
+      col_names = FALSE,
+      col_types = cols(.default = col_character()),
+      na = c("", "NA")
+    )
+
+    tibble(
+      id = as.character(dat[[1]]),
+      file = basename(files_2024[i])
+    )
+  }
+)
+```
+
+```{r}
+# remove missing IDs
+raw_ids_2024 <- raw_ids_2024 %>%
+  filter(
+    !is.na(id),
+    id != ""
+  ) %>%
+  mutate(
+    id = as.character(id)
+  )
+```
+
+```{r}
+n_files_2024 <- length(files_2024)
+threshold_2024 <- 0.80 * n_files_2024
+```
+
+```{r}
+# Count the number of files containing each anchor
+anchor_counts_2024 <- raw_ids_2024 %>%
+  distinct(
+    id,
+    file
+  ) %>%
+  count(
+    id,
+    name = "files_present"
+  ) %>%
+  mutate(
+    total_files = n_files_2024,
+    proportion_present = files_present / total_files,
+    retained_80pct = files_present >= threshold_2024
+  ) %>%
+  arrange(
+    desc(files_present),
+    id
+  )
+```
+
+```{r}
+# anchors retained for the 2024 analysis
+
+retained_2024 <- anchor_counts_2024 %>%
+  filter(retained_80pct) %>%
+  select(id) %>%
+  distinct() %>%
+  mutate(
+    id = as.character(id)
+  )
+
+numleft24 <- nrow(retained_2024)
+```
 # Overview
 
 This report compares longitudinal calibration behavior between the 2024 and 2026 calibration datasets.
@@ -40,6 +122,15 @@ For the 2026 data, calendar dates are preserved throughout the analysis. Thus, t
 # 1. Load 2024 Data
 
 The 2024 calibration data are read from individual CSV files. Each filename contains the calibration date, which is retained as the observation date.
+
+```{r}
+files_2024 <- list.files(
+  "calibration_outputs",
+  pattern = "^calibrations_probeData_2024-\\d{2}-\\d{2}\\.csv$",
+  full.names = TRUE
+) %>%
+  sort()
+```
 
 ```{r}
 files_2024 <- list.files(
@@ -88,8 +179,14 @@ raw_2024 <- map_dfr(
       )
   }
 )
+retained_24_calibration <- inner_join(
+  retained_2024,
+  raw_2024,
+  by = "id"
+) %>%
+  arrange(date)
 
-head(raw_2024)
+retained_24_calibration <- retained_24_calibration[, c(2, 1, 3:ncol(retained_24_calibration))]
 ```
 
 ## 1.1 Calculate Calendar Days for 2024
@@ -97,8 +194,7 @@ head(raw_2024)
 The first calibration date is treated as Day 0.
 
 ```{r}
-raw_2024 <- raw_2024 %>%
-  filter(calibration > 0) %>%
+retained_24_calibration <- retained_24_calibration %>%
   mutate(
     days = as.integer(
       date - min(date)
@@ -110,10 +206,10 @@ Check the date range:
 
 ```{r}
 data.frame(
-  first_date = min(raw_2024$date),
-  last_date = max(raw_2024$date),
-  calendar_days = max(raw_2024$days),
-  anchors = n_distinct(raw_2024$id)
+  first_date = min(retained_24_calibration$date),
+  last_date = max(retained_24_calibration$date),
+  calendar_days = max(retained_24_calibration$days),
+  anchors = n_distinct(retained_24_calibration$id)
 )
 ```
 
@@ -123,11 +219,108 @@ The 2026 data require the same cleaning procedure used in the primary calibratio
 
 The calibration value is calculated as:
 
-[
-y = 100m + b
-]
+$$y = 100m + b $$
 
 where (m) is the slope and (b) is the intercept.
+
+
+```{r}
+files_2026 <- list.files(
+  "26_Calibration",
+  pattern = "\\.csv$",
+  full.names = TRUE
+) %>%
+  sort()
+
+len26 <- length(files_2026)
+```
+
+```{r}
+df_list_2026 <- lapply(
+  files_2026,
+  read.csv
+)
+
+keep_2026 <- sapply(
+  df_list_2026,
+  function(x) {
+    !is.null(x) &&
+      nrow(x) >= 500
+  }
+)
+
+df_list_2026 <- df_list_2026[keep_2026]
+
+files_2026_retained <- files_2026[keep_2026]
+
+n_files_2026 <- length(files_2026_retained)
+```
+
+```{r}
+raw_ids_2026 <- map_dfr(
+  seq_along(df_list_2026),
+  function(i) {
+
+    dat <- df_list_2026[[i]]
+
+    tibble(
+      id = as.character(dat[[1]]),
+      file = basename(files_2026_retained[i])
+    )
+  }
+)
+```
+
+```{r}
+# Remove missing IDs:
+raw_ids_2026 <- raw_ids_2026 %>%
+  filter(
+    !is.na(id),
+    id != ""
+  ) %>%
+  mutate(
+    id = as.character(id)
+  )
+```
+
+```{r}
+threshold_2026 <- 0.80 * n_files_2026
+```
+
+```{r}
+# Count files containing each anchor:
+anchor_counts_2026 <- raw_ids_2026 %>%
+  distinct(
+    id,
+    file
+  ) %>%
+  count(
+    id,
+    name = "files_present"
+  ) %>%
+  mutate(
+    total_files = n_files_2026,
+    proportion_present = files_present / total_files,
+    retained_80pct = files_present >= threshold_2026
+  ) %>%
+  arrange(
+    desc(files_present),
+    id
+  )
+```
+
+```{r}
+# The anchors retained for the 2026 analysis
+retained_2026 <- anchor_counts_2026 %>%
+  filter(retained_80pct) %>%
+  select(id) %>%
+  distinct() %>%
+  mutate(
+    id = as.character(id)
+  )
+
+numleft26 <- nrow(retained_2026)
+```
 
 ## 2.1 Locate the 2026 Calibration Files
 
@@ -228,9 +421,9 @@ clean_df <- function(df) {
     fill = "right"
   )
 
-  # Convert to numeric
+  # keep character
   df$col1 <- suppressWarnings(
-    as.numeric(df$col1)
+    as.character(df$col1)
   )
 
   df$col2 <- suppressWarnings(
@@ -304,9 +497,18 @@ df_list_2026 <- lapply(
     ]
   }
 )
-
-length(common_vals_2026)
+# 
+# length(common_vals_2026)
+new_df <- data.frame(
+  id = unlist(common_vals_2026)
+)
+missing_from_retained_2026 <- new_df %>%
+  anti_join(
+    retained_2026,
+    by = "id"
+  )
 ```
+
 
 # 5. Build the 2026 Longitudinal Dataset
 
@@ -351,11 +553,13 @@ result_2026 <- Reduce(
   },
   dfs_subset_2026
 )
+
+result_2026 <- result_2026 %>%
+  filter(id != "7047")
 ```
 
-Keep only anchors with complete observations:
-
 ```{r}
+# Keep only anchors with complete observations:
 complete_2026 <- result_2026[
   complete.cases(
     result_2026[, -1]
@@ -366,7 +570,7 @@ complete_2026 <- result_2026[
 Convert to long format:
 
 ```{r}
-long_2026 <- complete_2026 %>%
+long_2026 <- result_2026 %>%
   pivot_longer(
     -id,
     names_to = "date",
@@ -419,8 +623,7 @@ drift_t =
 ]$$
 
 ```{r}
-cooked_2024 <- raw_2024 %>%
-  filter(calibration > 0) %>%
+cooked_2024 <- retained_24_calibration %>%
   group_by(id) %>%
   arrange(
     date,
@@ -434,13 +637,15 @@ cooked_2024 <- raw_2024 %>%
     max.drift = cummax(drift)
   ) %>%
   ungroup()
+
+na_cooked_2024 <- cooked_2024[!complete.cases(cooked_2024), ]
+cooked_2024 <- na.omit(cooked_2024)
 ```
 
 And for 2026:
 
 ```{r}
 cooked_2026 <- long_2026 %>%
-  filter(calibration > 0) %>%
   group_by(id) %>%
   arrange(
     date,
@@ -454,6 +659,9 @@ cooked_2026 <- long_2026 %>%
     max.drift = cummax(drift)
   ) %>%
   ungroup()
+
+na_cooked_2026 <- cooked_2026[!complete.cases(cooked_2026), ]
+cooked_2026 <- na.omit(cooked_2026)
 ```
 
 # 7. Dataset Summary
@@ -844,9 +1052,6 @@ This is potentially more interesting scientifically.
 For example, suppose you want to know:
 
 Which anchors were between the 90th and 99.9th percentile on at least 50% of the available days?
-```{r}
-library(kableExtra)
-```
 
 
 ```{r}
