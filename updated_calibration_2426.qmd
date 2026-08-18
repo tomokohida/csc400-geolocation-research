@@ -121,7 +121,7 @@ For the 2026 data, calendar dates are preserved throughout the analysis. Thus, t
 
 # 1. Load 2024 Data
 
-The 2024 calibration data are read from individual CSV files. Each filename contains the calibration date, which is retained as the observation date.
+The 2024 calibration data are read from individual CSV files. Each filename contains the date of retrieval, which is retained as the observation date, alongside the pre-computed calibration value.
 
 ```{r}
 files_2024 <- list.files(
@@ -189,40 +189,63 @@ retained_24_calibration <- inner_join(
 retained_24_calibration <- retained_24_calibration[, c(2, 1, 3:ncol(retained_24_calibration))]
 ```
 
-## 1.1 Calculate Calendar Days for 2024
-
-The first calibration date is treated as Day 0.
-
 ```{r}
-retained_24_calibration <- retained_24_calibration %>%
-  mutate(
-    days = as.integer(
-      date - min(date)
-    )
+retained_24_calibration <- retained_24_calibration %>% 
+  pivot_wider(
+    names_from = "date", 
+    values_from = "calibration"
   )
 ```
 
-Check the date range:
+```{r}
+# Keep only anchors with complete observations
+complete_2024 <- retained_24_calibration[
+  complete.cases(
+    retained_24_calibration[, -1]
+  ),
+]
+```
 
 ```{r}
-data.frame(
-  first_date = min(retained_24_calibration$date),
-  last_date = max(retained_24_calibration$date),
-  calendar_days = max(retained_24_calibration$days),
-  anchors = n_distinct(retained_24_calibration$id)
-)
+complete_2024 <- complete_2024 %>% 
+  pivot_longer(
+    cols = -id,
+    names_to = "date",
+    values_to = "calibration"
+  )
+
+complete_2024 <- complete_2024 %>% arrange(date)
+```
+
+```{r}
+# treat first calibration date as Day 0
+complete_2024 <- complete_2024 %>% 
+  mutate(
+    date = ymd(date), 
+    days = as.integer(date - min(date)) 
+  )
+```
+
+```{r}
+## Check date range:
+# data.frame(
+#   first_date = min(complete_2024$date),
+#   last_date = max(complete_2024$date),
+#   calendar_days = max(complete_2024$days),
+#   anchors = n_distinct(complete_2024$id)
+# )
 ```
 
 # 2. Load 2026 Data
 
-The 2026 data require the same cleaning procedure used in the primary calibration analysis.
+The 2026 data requires us to calculate calibration value via given slope and intercept values.
 
 The calibration value is calculated as:
-
-$$y = 100m + b $$
+$$
+y = 100m + b
+$$
 
 where (m) is the slope and (b) is the intercept.
-
 
 ```{r}
 files_2026 <- list.files(
@@ -322,9 +345,8 @@ retained_2026 <- anchor_counts_2026 %>%
 numleft26 <- nrow(retained_2026)
 ```
 
-## 2.1 Locate the 2026 Calibration Files
-
 ```{r}
+# locate the 2026 files
 files_2026 <- list.files(
   "26_Calibration",
   pattern = "\\.csv$",
@@ -341,19 +363,14 @@ dates_2026 <- as.Date(
 )
 
 # Check files and dates
-head(data.frame(
-  file = basename(files_2026),
-  date = dates_2026
-))
+# head(data.frame(
+#   file = basename(files_2026),
+#   date = dates_2026
+# ))
 ```
 
-## 2.2 Remove Files with Insufficient Observations
-
-Calibration files containing fewer than 500 observations are excluded.
-
-The corresponding dates are removed at the same time so that the data and dates remain aligned.
-
 ```{r}
+# Calibration files containing fewer than 500 observations are excluded + corresponding dates removed
 df_list_2026 <- lapply(
   files_2026,
   read.csv
@@ -370,17 +387,15 @@ df_list_2026 <- df_list_2026[keep_2026]
 dates_2026 <- dates_2026[keep_2026]
 files_2026 <- files_2026[keep_2026]
 
-head(data.frame(
-  file = basename(files_2026),
-  date = dates_2026
-))
+# head(data.frame(
+#   file = basename(files_2026),
+#   date = dates_2026
+# ))
 ```
 
-# 3. Clean 2026 Calibration Data
-
-This is the cleaning function used in the primary 2026 analysis.
-
 ```{r}
+# cleaning function for 2026 data
+
 clean_df <- function(df) {
 
   stopifnot(ncol(df) >= 2)
@@ -456,20 +471,16 @@ clean_df <- function(df) {
 }
 ```
 
-Apply the cleaning function:
-
 ```{r}
+# apply cleaning function
 df_list_2026 <- lapply(
   df_list_2026,
   clean_df
 )
 ```
 
-# 4. Keep Anchors Common Across 2026 Files
-
-An anchor is retained if it appears in at least 80% of the available calibration files.
-
 ```{r}
+# keep anchors common across files, retained if it appears in at least 80% of the available calibration files
 col1_list_2026 <- lapply(
   df_list_2026,
   function(df) df$col1
@@ -509,14 +520,9 @@ missing_from_retained_2026 <- new_df %>%
   )
 ```
 
-
-# 5. Build the 2026 Longitudinal Dataset
-
-Only anchors with complete observations across all retained calibration dates are used in the final comparison.
-
-Importantly, the actual calendar dates are retained rather than replacing them with sequential day numbers.
-
 ```{r}
+# build longitudinal dataset
+# only anchors with complete obserrvations across retained calibration dates are used in final comparison
 dfs_subset_2026 <- lapply(
   df_list_2026,
   function(d) {
@@ -539,9 +545,8 @@ dfs_subset_2026 <- Map(
 )
 ```
 
-Combine the daily datasets:
-
 ```{r}
+# combine the daily datasets
 result_2026 <- Reduce(
   function(x, y) {
     merge(
@@ -559,7 +564,7 @@ result_2026 <- result_2026 %>%
 ```
 
 ```{r}
-# Keep only anchors with complete observations:
+# keep only anchors with complete observations
 complete_2026 <- result_2026[
   complete.cases(
     result_2026[, -1]
@@ -567,10 +572,9 @@ complete_2026 <- result_2026[
 ]
 ```
 
-Convert to long format:
-
 ```{r}
-long_2026 <- result_2026 %>%
+# convert to long format
+long_2026 <- complete_2026 %>%
   pivot_longer(
     -id,
     names_to = "date",
@@ -581,9 +585,8 @@ long_2026 <- result_2026 %>%
   )
 ```
 
-Calculate calendar days from the first calibration date:
-
 ```{r}
+# calculate calendar days from the first calibration date
 long_2026 <- long_2026 %>%
   group_by(id) %>%
   arrange(
@@ -598,19 +601,52 @@ long_2026 <- long_2026 %>%
   ungroup()
 ```
 
-Check the resulting 2026 dataset:
-
 ```{r}
-data.frame(
-  first_date = min(long_2026$date),
-  last_date = max(long_2026$date),
-  calendar_days = max(long_2026$days),
-  calibration_days = n_distinct(long_2026$date),
-  anchors = n_distinct(long_2026$id)
-)
+# check the resulting 2026 dataset
+# data.frame(
+#   first_date = min(long_2026$date),
+#   last_date = max(long_2026$date),
+#   calendar_days = max(long_2026$days),
+#   calibration_days = n_distinct(long_2026$date),
+#   anchors = n_distinct(long_2026$id)
+# )
 ```
 
-# 6. Calculate Drift
+# 3. Dataset Summary
+
+* Only anchors with complete observations across all retained calibration dates are used in the final comparison.
+
+* The actual calendar dates are retained rather than replacing them with sequential day numbers.
+
+```{r}
+# Before comparing the plots, check the size and temporal coverage of each dataset.
+
+comparison_summary <- bind_rows(
+  complete_2024 %>%
+    summarise(
+      year = "2024",
+      anchors = n_distinct(id),
+      observations = n(),
+      first_date = min(date),
+      last_date = max(date),
+      calendar_days = max(days)
+    ),
+
+  long_2026 %>%
+    summarise(
+      year = "2026",
+      anchors = n_distinct(id),
+      observations = n(),
+      first_date = min(date),
+      last_date = max(date),
+      calendar_days = max(days)
+    )
+)
+
+kable(comparison_summary)
+```
+
+# 4. Calculate Drift
 
 The following calculation is intentionally equivalent to Zach's original 2024 analysis.
 
@@ -623,7 +659,7 @@ drift_t =
 ]$$
 
 ```{r}
-cooked_2024 <- retained_24_calibration %>%
+cooked_2024 <- complete_2024 %>%
   group_by(id) %>%
   arrange(
     date,
@@ -642,9 +678,8 @@ na_cooked_2024 <- cooked_2024[!complete.cases(cooked_2024), ]
 cooked_2024 <- na.omit(cooked_2024)
 ```
 
-And for 2026:
-
 ```{r}
+# same for 2026
 cooked_2026 <- long_2026 %>%
   group_by(id) %>%
   arrange(
@@ -664,35 +699,6 @@ na_cooked_2026 <- cooked_2026[!complete.cases(cooked_2026), ]
 cooked_2026 <- na.omit(cooked_2026)
 ```
 
-# 7. Dataset Summary
-
-```{r}
-# Before comparing the plots, check the size and temporal coverage of each dataset.
-
-comparison_summary <- bind_rows(
-  cooked_2024 %>%
-    summarise(
-      year = "2024",
-      anchors = n_distinct(id),
-      observations = n(),
-      first_date = min(date),
-      last_date = max(date),
-      calendar_days = max(days)
-    ),
-
-  cooked_2026 %>%
-    summarise(
-      year = "2026",
-      anchors = n_distinct(id),
-      observations = n(),
-      first_date = min(date),
-      last_date = max(date),
-      calendar_days = max(days)
-    )
-)
-
-comparison_summary
-```
 \newpage
 ```{r}
 ggplot(
