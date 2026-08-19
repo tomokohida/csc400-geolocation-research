@@ -119,7 +119,7 @@ For the 2026 data, calendar dates are preserved throughout the analysis. Thus, t
 
 \newpage
 
-# 1. Load 2024 Data
+# 1. Load Data
 
 The 2024 calibration data are read from individual CSV files. Each filename contains the date of retrieval, which is retained as the observation date, alongside the pre-computed calibration value.
 
@@ -236,15 +236,12 @@ complete_2024 <- complete_2024 %>%
 # )
 ```
 
-# 2. Load 2026 Data
-
 The 2026 data requires us to calculate calibration value via given slope and intercept values.
 
 The calibration value is calculated as:
 $$
 y = 100m + b
 $$
-
 where (m) is the slope and (b) is the intercept.
 
 ```{r}
@@ -612,11 +609,6 @@ long_2026 <- long_2026 %>%
 # )
 ```
 
-# 3. Dataset Summary
-
-* Only anchors with complete observations across all retained calibration dates are used in the final comparison
-
-* The actual calendar dates are retained rather than replacing them with sequential day values
 ```{r}
 # Before comparing the plots, check the size and temporal coverage of each dataset.
 
@@ -642,12 +634,12 @@ comparison_summary <- bind_rows(
     )
 )
 
-kable(comparison_summary)
+kable(comparison_summary, caption = "Dataset Summaries")
 ```
+Only anchors with complete observations across all retained calibration dates are used in the final comparison
 
-# 4. Drift Analysis
 
-## 4.1 Calculating Drift
+# 2. Calculating Drift
 
 The following calculation is equivalent to Zach's original 2024 analysis.
 
@@ -658,7 +650,6 @@ drift_t =
 \frac{|calibration_t-calibration_0|}
 {calibration_0}
 $$
-
 ```{r}
 cooked_2024 <- complete_2024 %>%
   group_by(id) %>%
@@ -702,7 +693,8 @@ cooked_2026 <- na.omit(cooked_2026)
 
 \newpage
 
-## 4.2 Visualizations (1)
+# 3. Maximum Drift
+
 ```{r}
 ggplot(
   cooked_2024,
@@ -1026,9 +1018,7 @@ anchors_90_999_2026 <- cooked_2026 %>%
 # head(anchors_90_999_2026, 20)
 ```
 
-## 4.3 90-99.9th Percentile Anchors
-
-Which anchors are responsible for the region between the 90th and 99.9th percentile at any point during the recorded time period?
+## 3.1 90-99.9th Percentile Anchors
 
 ```{r}
 ids_90_999_2024 <- anchors_90_999_2024 %>%
@@ -1042,14 +1032,10 @@ ids_90_999_2026 <- anchors_90_999_2026 %>%
 ids90999num24 <- nrow(ids_90_999_2024)
 ids90999num26 <- nrow(ids_90_999_2026)
 ```
-
-* `r ids90999num24` of 659 anchors entered the 90-99.9th percentile range of drift in 2024 data
-* `r ids90999num26` of 444 anchors entered the 90-99.9th percentile range of drift in 2026 data
-
-Which anchors were between the 90th and 99.9th percentile on at least once? 
-
-(Code for IDs in each category is available in the qmd)
-
+<!-- * `r ids90999num24` of 659 anchors entered the 90-99.9th percentile range of drift in 2024 data -->
+<!-- * `r ids90999num26` of 444 anchors entered the 90-99.9th percentile range of drift in 2026 data -->
+Which anchors were between the 90th and 99.9th percentile on at least once?
+<!-- (Code for IDs in each category is available in the qmd) -->
 ```{r}
 persistent_90_999_2024 <- anchors_90_999_2024 %>%
   count(id, name = "days_in_range") %>%
@@ -1118,7 +1104,7 @@ cleaned_persistent_90_999_both <- persistent_90_999_both %>%
 # kable(removed_persistent_90_999_both)
 ```
 
-## 4.4 Geographic Context of IDs Consistently in the 90-99.9 Range
+## 3.2 Geographic Context of IDs Consistently in the 90-99.9 Range
 
 Below, we take a look at the IDs that appeared in the 90-99.9th percentile range more than one time each between the 2024 and 2026 datasets. These anchors entered the range either once in 2024 and more than once in 2026, or more than once in 2024 and once in 2026, or entered the range more than once in both 2024 and 2026 data. We will discuss the geographic context of these `r nrow(cleaned_persistent_90_999_both)` anchors below:
 
@@ -1149,81 +1135,73 @@ cleaned_persistent_90_999_both_geo <- cleaned_persistent_90_999_both %>%
 
 # kable(cleaned_persistent_90_999_both_geo)
 ```
-
-### 4.4.1 ASN summary
 ```{r}
 asn_summary <- cleaned_persistent_90_999_both_geo %>%
   filter(!is.na(asn)) %>%
-  count(asn, name = "anchor_count") %>%
-  mutate(
-    percent_of_anchors = 100 * anchor_count / sum(anchor_count)
-  ) %>%
-  arrange(desc(anchor_count), asn)
+  count(asn, name = "anchors") %>%
+# 
+#   mutate(
+#     percent_of_anchors = 100 * anchors / sum(anchors)
+#   ) %>%
+  arrange(desc(anchors), asn)
 
 # kable(asn_summary)
 ```
 
 ```{r}
 asn_repeated <- asn_summary %>%
-  filter(anchor_count > 1)
+  filter(anchors > 1)
 
-kable(asn_repeated)
+kable(asn_repeated, caption = "ASN Frequency")
 ```
-
-### 4.4.2 Country Frequency
-
 ```{r}
-country_summary <- cleaned_persistent_90_999_both_geo %>%
-  filter(!is.na(country)) %>%
-  count(country, name = "anchor_count") %>%
-  mutate(
-    percent_of_anchors = 100 * anchor_count / sum(anchor_count)
-  ) %>%
-  arrange(desc(anchor_count), country)
+continent_summary <- cleaned_persistent_90_999_both_geo %>%
+  filter(!is.na(continent)) %>%
+  count(continent, name = "anchors") %>%
+  # mutate(
+  #   percent_anchors = 100 * anchors / sum(anchors)
+  # ) %>%
+  arrange(desc(anchors), continent)
 
-# kable(country_summary)
+# kable(continent_summary)
+continent_repeated <- continent_summary %>%
+  filter(anchors > 1)
 
-country_repeated <- country_summary %>%
-  filter(anchor_count > 1)
-
-kable(country_repeated)
+kable(continent_repeated, caption = "Continent Frequency")
 ```
-
-### 4.4.3 City Frequency
 ```{r}
 city_summary <- cleaned_persistent_90_999_both_geo %>%
   filter(!is.na(city)) %>%
-  count(city, name = "anchor_count") %>%
-  mutate(
-    percent_of_anchors = 100 * anchor_count / sum(anchor_count)
-  ) %>%
-  arrange(desc(anchor_count), city)
+  count(city, name = "anchors") %>%
+  # mutate(
+  #   percent_anchors = 100 * anchors / sum(anchors)
+  # ) %>%
+  arrange(desc(anchors), city)
 
 # kable(city_summary)
 
 repeated_cities <- city_summary %>%
-  filter(anchor_count > 1)
+  filter(anchors > 1)
 
-kable(repeated_cities)
+kable(repeated_cities, caption = "City Frequency")
 ```
-
-### 4.4.4 Continent Frequency
-
 ```{r}
-continent_summary <- cleaned_persistent_90_999_both_geo %>%
-  filter(!is.na(continent)) %>%
-  count(continent, name = "anchor_count") %>%
-  mutate(
-    percent_of_anchors = 100 * anchor_count / sum(anchor_count)
-  ) %>%
-  arrange(desc(anchor_count), continent)
+country_summary <- cleaned_persistent_90_999_both_geo %>%
+  filter(!is.na(country)) %>%
+  count(country, name = "anchors") %>%
+  # mutate(
+  #   percent_anchors = 100 * anchors / sum(anchors)
+  # ) %>%
+  arrange(desc(anchors), country)
 
-# kable(continent_summary)
-continent_repeated <- continent_summary %>%
-  filter(anchor_count > 1)
+# kable(country_summary)
 
-kable(continent_repeated)
+country_repeated <- country_summary %>%
+  filter(anchors > 1)
+
+kable(country_repeated, caption = "Country Frequency")
 ```
+
 
 ```{r}
 # combined
@@ -1333,7 +1311,7 @@ kable(continent_repeated)
 
 \newpage
 
-# 9. Instantaneous Drift
+# 4. Instantaneous Drift
 
 ```{r}
 ggplot(
@@ -1393,7 +1371,7 @@ ggplot(
 
 \newpage
 
-# 10. Maximum Drift Threshold Analysis
+# 5. Maximum Drift Threshold Analysis
 
 ```{r}
 thresholds <- c(
@@ -1652,7 +1630,7 @@ ggplot(
 
 \newpage
 
-# 11. Instantaneous Drift Threshold Analysis
+# 6. Instantaneous Drift Threshold Analysis
 
 This analysis counts the number of anchors that are currently beyond each threshold, rather than the number that have ever exceeded it.
 
@@ -1892,7 +1870,7 @@ ggplot(
 ```
 \newpage
 
-# 12. Direct 2024 vs. 2026 Comparison
+# 7. Direct 2024 vs. 2026 Comparison
 
 For direct comparison, it is useful to put both years onto the same plot. Because the datasets contain different numbers of anchors, percentages are more informative than raw counts.
 
@@ -2093,7 +2071,7 @@ ggplot(
 
 \newpage
 
-# 14. Notes for Interpretation
+# 8. Notes for Interpretation
 
 The maximum-drift plots measure whether an anchor has **ever** departed from its initial calibration by a given amount. Consequently, these curves can only increase or remain constant.
 
@@ -2103,10 +2081,6 @@ A pattern in which maximum drift increases over time while instantaneous drift r
 
 The 2024 and 2026 comparisons should be interpreted using calendar time. Missing calibration dates in the 2026 dataset remain gaps in the time axis rather than being compressed into consecutive observation numbers.
 
-
-### One thing I'd particularly recommend
-
 The **last two plots** in this QMD are probably the most useful for your actual comparison. They put 2024 and 2026 on the **same percentage scale**, so the fact that you have 444 complete anchors in 2026 versus a different number in 2024 doesn't distort the comparison.
 
-Also, this version fixes an important issue from the earlier approach: **the 2026 x-axis is based on the dates in the filenames all the way through the analysis**. If, for example, 18 calendar days were omitted, those 18 days still occupy space on the x-axis.
 
