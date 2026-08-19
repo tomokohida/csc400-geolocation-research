@@ -1104,7 +1104,7 @@ cleaned_persistent_90_999_both <- persistent_90_999_both %>%
 # kable(removed_persistent_90_999_both)
 ```
 
-## 3.2 Geographic Context of IDs Consistently in the 90-99.9 Range
+## 3.2 Geographic Context of IDs Associated with repeated ASNs in the 90-99.9 Range
 
 Below, we take a look at the `r nrow(cleaned_persistent_90_999_both)` IDs that appeared in the 90-99.9th percentile range more than one time each between the 2024 and 2026 datasets. After joining geographic context to these anchors `cleaned_persistent_90_999_both`, we find that several ASN IDs, cities, and countries are associated more than once with Anchor IDs consistently in the 90-99.9th percentile range. Below are tables for which there was more than anchor association.
 
@@ -1200,7 +1200,7 @@ country_summary <- cleaned_persistent_90_999_both_geo %>%
 # kable(country_summary)
 
 country_repeated <- country_summary %>%
-  filter(anchors > 1)
+  filter(anchors > 2)
 
 kable(country_repeated, caption = "Country Frequency")
 ```
@@ -1330,6 +1330,60 @@ This table lists Germany, the United States, Singapore, Austria, France, Italy, 
 
 \newpage
 
+## 3.3 Flaw with Maximum Calibration Drift Visualization: Day 0 as Ground Truth
+If we look at the actual day in range proportions of the anchors included in the figures above, we see that some of them occupied the range 1 time in 2024 and 79 out of 80 times in 2026. What this likely demonstrates is that the day 0 calibration measurement for 2026 was an outlier, and for the 79 out of 80 days, the calibration value returned to its ground truth calibration range. However, what gets recorded in the chart is an occupying of the range strictly with respect to the day 0 measurement.
+
+Take a look at the individual anchors associated with the ASN Frequency Table 2:
+
+```{r}
+rangeanchor_summary_asn <- cleaned_persistent_90_999_both_geo %>%
+  rename(in_range_24 = days_in_range.x, 
+         in_range_26 = days_in_range.y,
+         total_24 = total_days.x,
+         total26 = total_days.y) %>%
+  select(asn, id, in_range_24, total_24, in_range_26, total26, continent, country, city)
+
+anchor_summary_14061 <- rangeanchor_summary_asn %>%
+  filter(asn == 14061) %>% select(-asn)
+anchor_summary_16276 <- rangeanchor_summary_asn %>%
+  filter(asn == 16276) %>% select(-asn)
+anchor_summary_3491 <- rangeanchor_summary_asn %>%
+  filter(asn == 3491) %>% select(-asn)
+anchor_summary_57695 <- rangeanchor_summary_asn %>%
+  filter(asn == 57695) %>% select(-asn)
+anchor_summary_36236 <- rangeanchor_summary_asn %>%
+  filter(asn == 36236) %>% select(-asn)
+anchor_summary_197540 <- rangeanchor_summary_asn %>%
+  filter(asn == 197540) %>% select(-asn)
+
+kable(anchor_summary_14061, caption = "AS14061 Anchors")
+kable(anchor_summary_16276, caption = "AS16276 Anchors")
+kable(anchor_summary_3491, caption = "AS3491 Anchors")
+```
+
+\newpage
+
+```{r}
+kable(anchor_summary_57695, caption = "AS57695 Anchors") %>% kable_styling() %>% row_spec(3, background = "yellow")
+kable(anchor_summary_36236, caption = "AS36236 Anchors")
+kable(anchor_summary_197540, caption = "AS197540 Anchors")
+```
+
+## 3.4 Geographic Context of Single Anchor Associated ASNs in the 90-99.9 Range
+
+look at anchors_90_999_2024 and anchors_90_999_2026 and see if the biggest contributor to the 90-999 range is made of single ASN associated IDs. Map the average percentiles of the repeated ASN IDs. they should be on the lower side. look up the ASNs that are the worst, so single IDs that have the most counts for being in the 90-999 range.
+
+get ASN summary for asns that are associated with 1 anchor only, find the ones with the most counts for being in the range, discuss asns and geography, confirm with country frequency table?
+```{r}
+asn_repeated <- asn_summary %>%
+  filter(anchors == 1)
+
+kable(asn_repeated, caption = "ASN Frequency")
+```
+
+
+\newpage
+
 # 4. Instantaneous Drift
 
 ```{r}
@@ -1351,6 +1405,106 @@ ggplot(
     title = "2024 Instantaneous Calibration Drift",
     x = "Calendar days since first calibration",
     y = "Deviation from Day 0"
+  )  +
+  
+  # 25th percentile
+  stat_summary(
+    aes(
+      group = 1,
+      color = "25th percentile"
+    ),
+    fun = \(x) quantile(x, 0.25, na.rm = TRUE),
+    geom = "line",
+    linewidth = 0.4
+  ) +
+  
+  # Mean
+  stat_summary(
+    aes(
+      group = 1,
+      color = "Mean"
+    ),
+    fun = mean,
+    geom = "line",
+    linewidth = 0.5
+  ) +
+  
+  # 75th percentile
+  stat_summary(
+    aes(
+      group = 1,
+      color = "75th percentile"
+    ),
+    fun = \(x) quantile(x, 0.75, na.rm = TRUE),
+    geom = "line",
+    linewidth = 0.4
+  ) +
+  
+  # 90th percentile
+  stat_summary(
+    aes(
+      group = 1,
+      color = "90th percentile"
+    ),
+    fun = \(x) quantile(x, 0.90, na.rm = TRUE),
+    geom = "line",
+    linewidth = 0.4
+  ) +
+  
+  # 95th percentile
+  stat_summary(
+    aes(
+      group = 1,
+      color = "95th percentile"
+    ),
+    fun = \(x) quantile(x, 0.95, na.rm = TRUE),
+    geom = "line",
+    linewidth = 0.4
+  ) +
+  
+  # 99th percentile
+  stat_summary(
+    aes(
+      group = 1,
+      color = "99th percentile"
+    ),
+    fun = \(x) quantile(x, 0.99, na.rm = TRUE),
+    geom = "line",
+    linewidth = 0.4
+  ) +
+  
+  # 99.9th percentile
+  stat_summary(
+    aes(
+      group = 1,
+      color = "99.9th percentile"
+    ),
+    fun = \(x) quantile(x, 0.999, na.rm = TRUE),
+    geom = "line",
+    linewidth = 0.4
+  ) +
+  
+  # Colors and legend
+  scale_color_manual(
+    name = "Statistic",
+    breaks = c(
+      "99.9th percentile",
+      "99th percentile",
+      "95th percentile",
+      "90th percentile",
+      "75th percentile",
+      "Mean",
+      "25th percentile"
+    ),
+    values = c(
+      "99.9th percentile" = "maroon",
+      "99th percentile"   = "magenta",
+      "95th percentile"   = "purple",
+      "90th percentile"   = "blue",
+      "75th percentile"   = "#20b2aa",
+      "Mean"              = "red",
+      "25th percentile"   = "green"
+    )
   ) +
   scale_y_continuous(
     labels = scales::percent_format(
@@ -1380,6 +1534,106 @@ ggplot(
     x = "Calendar days since first calibration",
     y = "Deviation from Day 0"
   ) +
+  
+  # 25th percentile
+  stat_summary(
+    aes(
+      group = 1,
+      color = "25th percentile"
+    ),
+    fun = \(x) quantile(x, 0.25, na.rm = TRUE),
+    geom = "line",
+    linewidth = 0.4
+  ) +
+  
+  # Mean
+  stat_summary(
+    aes(
+      group = 1,
+      color = "Mean"
+    ),
+    fun = mean,
+    geom = "line",
+    linewidth = 0.5
+  ) +
+  
+  # 75th percentile
+  stat_summary(
+    aes(
+      group = 1,
+      color = "75th percentile"
+    ),
+    fun = \(x) quantile(x, 0.75, na.rm = TRUE),
+    geom = "line",
+    linewidth = 0.4
+  ) +
+  
+  # 90th percentile
+  stat_summary(
+    aes(
+      group = 1,
+      color = "90th percentile"
+    ),
+    fun = \(x) quantile(x, 0.90, na.rm = TRUE),
+    geom = "line",
+    linewidth = 0.4
+  ) +
+  
+  # 95th percentile
+  stat_summary(
+    aes(
+      group = 1,
+      color = "95th percentile"
+    ),
+    fun = \(x) quantile(x, 0.95, na.rm = TRUE),
+    geom = "line",
+    linewidth = 0.4
+  ) +
+  
+  # 99th percentile
+  stat_summary(
+    aes(
+      group = 1,
+      color = "99th percentile"
+    ),
+    fun = \(x) quantile(x, 0.99, na.rm = TRUE),
+    geom = "line",
+    linewidth = 0.4
+  ) +
+  
+  # 99.9th percentile
+  stat_summary(
+    aes(
+      group = 1,
+      color = "99.9th percentile"
+    ),
+    fun = \(x) quantile(x, 0.999, na.rm = TRUE),
+    geom = "line",
+    linewidth = 0.4
+  ) +
+  
+  # Colors and legend
+  scale_color_manual(
+    name = "Statistic",
+    breaks = c(
+      "99.9th percentile",
+      "99th percentile",
+      "95th percentile",
+      "90th percentile",
+      "75th percentile",
+      "Mean",
+      "25th percentile"
+    ),
+    values = c(
+      "99.9th percentile" = "maroon",
+      "99th percentile"   = "magenta",
+      "95th percentile"   = "purple",
+      "90th percentile"   = "blue",
+      "75th percentile"   = "#20b2aa",
+      "Mean"              = "red",
+      "25th percentile"   = "green"
+    )
+  ) +
   scale_y_continuous(
     labels = scales::percent_format(
       accuracy = 1
@@ -1390,11 +1644,15 @@ ggplot(
 
 \newpage
 
-  Following Zach's lead, I applied the Instantaneous Calibration Drift visualization on the 2024 and 2026 data. In the 2024 figure, anchor calibration drift is concentrated towards 0% and begins to fray between 2.5% to 7.5% deviation significantly. The remaining fraying seems to happen between 7.5% and 20% deviation primarily, and a few outlier anchors extend above 20%, 30%, and 40%. 
+## 4.1 Percentile Distribution
+
+  Following Zach's lead, I applied the Instantaneous Calibration Drift visualization on the 2024 and 2026 data. In the 2024 figure, anchor calibration drift is concentrated towards 0% and mainly seems to decrease in density between 2.5% to 7.5% deviation. The remaining fraying seems to happen between 7.5% and 20% deviation primarily, and a few outlier anchors extend above 20%, 30%, and 40%. 
   
-  As for the 2026 data, anchor calibration drift seems to be concentrated between 0% and 1% mainly, and spreads similarly to the 2024 2.5% to 7.5% region in the 1% to 4% area between day 0 and day 35. This range seems to extend well into 7.5% after day 35. While the outliers drifted between 5% and 15% deviation before day 35, the outlier group is joined by more anchors and extends past 17.5% consistently between day 35 and the end of the recorded period. While the y-axis deviation scale is inconsistent between the two figures, it is clear that the anchor deviation behavior noticeably shifts in the 2026 data. 
+  As for the 2026 data, anchor calibration drift seems to be mainly concentrated between 0% and 1%, and spreads similarly to the 2024 2.5% to 7.5% region in the 1% to 4% area between day 0 and day 35. This range seems to extend well into 7.5% after day 35. While the outliers drifted between 5% and 15% deviation before day 35, the outlier group is joined by more anchors and extends past 17.5% consistently between day 35 and the end of the recorded period. While the y-axis deviation scale is inconsistent between the two figures, it is clear that the anchor deviation behavior noticeably shifts in the 2026 data. 
   
-  Due to the significantly lower number of anchors in the 2026 data and the differing time periods, interpreting these figures alone is not enough. If there were 215 or so more anchors in the 2026 data to correspond with the 659 anchors in the 2024 data, perhaps this shift behavior would have been camouflaged by a complement shift down around day 35. Indeed, is not clear that the 2024 figure is completely absent of these kinds of shift either.
+  Due to the significantly lower number of anchors in the 2026 data and the differing time periods, interpreting these figures alone is not enough. If there were 215 or so more anchors in the 2026 data to correspond with the 659 anchors in the 2024 data, perhaps this shift behavior would have been camouflaged by a complement shift down around day 35. It is not clear that the 2024 figure is completely absent of these kinds of shifts either.
+  
+see if the same anchors come up for the 90-999 range
 
 \newpage
 
@@ -1662,6 +1920,12 @@ ggplot(
   
   It is especially encouraging to observe that in the 2024 data, the number exceeding the 20% threshold does not exceed 5 anchors, and in 2026, only 1 anchor exceeds 20% after day 77.
 
+
+
+At any point, make table for percent drift table for IDs, top will be the highest drift, then the lower drifts, and then lower like ID 8 exceeded 20%
+6 and 8 exceeded 10%
+6 ad 9 and 0 and 3 exceeded 5%
+and within each table its ordered by % exceeded
 \newpage
 
 # 6. Instantaneous Drift Threshold
@@ -1902,7 +2166,7 @@ ggplot(
 ```
 \newpage
 
-
+add mean or median values for each threshold line, note value
 
 \newpage
 
@@ -2017,6 +2281,10 @@ ggplot(
   ) +
   theme_minimal()
 ```
+
+Look at the curves and see if theres a relationship between the two
+
+
 ```{r}
 # instantaneous drift comparison
 
@@ -2104,6 +2372,8 @@ ggplot(
   ) +
   theme_minimal()
 ```
+
+Compare proportion of instantaneous drift , calculate relationship between curves
 
 \newpage
 
