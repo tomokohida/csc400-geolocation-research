@@ -1018,7 +1018,7 @@ anchors_90_999_2026 <- cooked_2026 %>%
 # head(anchors_90_999_2026, 20)
 ```
 
-## 3.1 90-99.9th Percentile Anchors
+## 3.1 90-99.9th Percentile Anchor Summary
 
 ```{r}
 ids_90_999_2024 <- anchors_90_999_2024 %>%
@@ -1034,7 +1034,7 @@ ids90999num26 <- nrow(ids_90_999_2026)
 ```
 <!-- * `r ids90999num24` of 659 anchors entered the 90-99.9th percentile range of drift in 2024 data -->
 <!-- * `r ids90999num26` of 444 anchors entered the 90-99.9th percentile range of drift in 2026 data -->
-Which anchors were between the 90th and 99.9th percentile on at least once?
+<!-- Which anchors were between the 90th and 99.9th percentile on at least once? -->
 <!-- (Code for IDs in each category is available in the qmd) -->
 ```{r}
 persistent_90_999_2024 <- anchors_90_999_2024 %>%
@@ -1106,7 +1106,7 @@ cleaned_persistent_90_999_both <- persistent_90_999_both %>%
 
 ## 3.2 Geographic Context of IDs Consistently in the 90-99.9 Range
 
-Below, we take a look at the IDs that appeared in the 90-99.9th percentile range more than one time each between the 2024 and 2026 datasets. These anchors entered the range either once in 2024 and more than once in 2026, or more than once in 2024 and once in 2026, or entered the range more than once in both 2024 and 2026 data. We will discuss the geographic context of these `r nrow(cleaned_persistent_90_999_both)` anchors below:
+Below, we take a look at the `r nrow(cleaned_persistent_90_999_both)` IDs that appeared in the 90-99.9th percentile range more than one time each between the 2024 and 2026 datasets. After joining geographic context to these anchors `cleaned_persistent_90_999_both`, we find that several ASN IDs, cities, and countries are associated more than once with Anchor IDs consistently in the 90-99.9th percentile range. Below are tables for which there was more than anchor association.
 
 ```{r}
 landmarks <- read_csv(
@@ -1154,37 +1154,40 @@ asn_repeated <- asn_summary %>%
 
 kable(asn_repeated, caption = "ASN Frequency")
 ```
+
+AS14061 belongs to DigitalOcean, LLC, registered in the United States, and hosts 49.9% of its IPv4 share in the United States, 12.4% in Germany, 10.8% in the Netherlands, and 10.3% in Singapore. The rest of the percentages reported are below 10% and are reported to be in the United Kingdom, India, Canada, and Australia. The same countries are listed with different percentages for IPv6.
+[Link for ASN 14061](https://ipinfo.io/AS14061)
+
+AS16276 belongs to OVH SAS, registered in France. It hosts 55.5% of its IPv4 share in France, 17.5% in Canada, and less than 10% in the United States, Germany, the United Kingdom, Poland, Singapore, and Australia. It hosts less than 1% in India, Italy Ireland, Netherlands, Belgium, and Hong Kong. The same countries are listed for IPv6, with different percentages.
+[Link for ASN 16276](https://ipinfo.io/AS16276)
+
+AS3491 belongs to PCCW Global (HK) Ltd., registered in Hong Kong. It hosts 32% of its IPv6 share in Hong Kong, 28.9% in South Africa, 28.6% in Mozambique, and less than 3% in the United States, Singapore, Japan, and <1% in Germany, France, Taiwan, South Korea, United Kingdom, Australia, Netherlands, Mexico, Sweden, and Kenya. The same countries occupy the shares of IPv4 addresses, with different percentages.
+[Link for ASN 3491](https://ipinfo.io/AS3491)
+
+AS57695 belongs to Misaka Network, Inc., and is registered in the the United States. It is registered in the United States, but does not maintain any IP addresses in the country. It hosts its IPv4 equally amongst the Netherlands, France, Singapore, Brazil, Switzerland, and Germany at 16.7%. For IPv6 addresses, the same countries are listed, but 48.3% of the share is associated with the Netherlands, 48.2% with France, 3.1% with Singapore, and the remaining countries are associated with less than 1%.
+[Link for ASN 57695](https://ipinfo.io/AS57695)
+
+AS36236 belongs to NetActuate, Inc, registered with the United States. 68.6% of its IP share is in the United States, and less than 5% are in 20 different countries. The IPv6 share is similar, with the United States at 65.8% South AFrica, Ghana, and Kenya above 9%, and the same IPv4 listed countries for the remaining share.
+[Link for ASN 36236](https://ipinfo.io/AS36236)
+
+AS197540 belongs to netcup GmbH, registered in Germany. Germany dominantes its IPv4 share with 89.2%, Austria represents 9.8%, and the Netherlands the remaining 1%. The same three countries constitute the IPv6 share. [Link for ASN 197540](https://ipinfo.io/AS197540)
+
 ```{r}
-continent_summary <- cleaned_persistent_90_999_both_geo %>%
-  filter(!is.na(continent)) %>%
-  count(continent, name = "anchors") %>%
-  # mutate(
-  #   percent_anchors = 100 * anchors / sum(anchors)
-  # ) %>%
-  arrange(desc(anchors), continent)
-
-# kable(continent_summary)
-continent_repeated <- continent_summary %>%
-  filter(anchors > 1)
-
-kable(continent_repeated, caption = "Continent Frequency")
+# continent_summary <- cleaned_persistent_90_999_both_geo %>%
+#   filter(!is.na(continent)) %>%
+#   count(continent, name = "anchors") %>%
+#   # mutate(
+#   #   percent_anchors = 100 * anchors / sum(anchors)
+#   # ) %>%
+#   arrange(desc(anchors), continent)
+# 
+# # kable(continent_summary)
+# continent_repeated <- continent_summary %>%
+#   filter(anchors > 1)
+# 
+# kable(continent_repeated, caption = "Continent Frequency")
 ```
-```{r}
-city_summary <- cleaned_persistent_90_999_both_geo %>%
-  filter(!is.na(city)) %>%
-  count(city, name = "anchors") %>%
-  # mutate(
-  #   percent_anchors = 100 * anchors / sum(anchors)
-  # ) %>%
-  arrange(desc(anchors), city)
-
-# kable(city_summary)
-
-repeated_cities <- city_summary %>%
-  filter(anchors > 1)
-
-kable(repeated_cities, caption = "City Frequency")
-```
+<!-- Unlike ASN, continents are not associated with any one specific provider responsible for anchor upkeep. This table does not really tell us anything.... Europe has the biggest proportion of RIPE anchors anyway -->
 ```{r}
 country_summary <- cleaned_persistent_90_999_both_geo %>%
   filter(!is.na(country)) %>%
@@ -1201,7 +1204,24 @@ country_repeated <- country_summary %>%
 
 kable(country_repeated, caption = "Country Frequency")
 ```
+This table lists Germany, the United States, Singapore, Austria, France, Italy, Czechia, United Kingdom, and the Netherlands as being associated with more than 2 anchors that occupy the 90-99.9th percentile consistently. Given the IPv4 and IPv6 shares of the previously identified host network providers, this distribution of countries seems reasonable. The city and continent distributions are available in the code as well, but are omitted.
 
+```{r}
+# city_summary <- cleaned_persistent_90_999_both_geo %>%
+#   filter(!is.na(city)) %>%
+#   count(city, name = "anchors") %>%
+#   # mutate(
+#   #   percent_anchors = 100 * anchors / sum(anchors)
+#   # ) %>%
+#   arrange(desc(anchors), city)
+# 
+# # kable(city_summary)
+# 
+# repeated_cities <- city_summary %>%
+#   filter(anchors > 1)
+# 
+# kable(repeated_cities, caption = "City Frequency")
+```
 
 ```{r}
 # combined
@@ -1271,7 +1291,6 @@ kable(country_repeated, caption = "Country Frequency")
 # 
 # kable(geo_cluster_summary)
 ```
-
 
 ```{r}
 # 
@@ -1371,7 +1390,15 @@ ggplot(
 
 \newpage
 
-# 5. Maximum Drift Threshold Analysis
+  Following Zach's lead, I applied the Instantaneous Calibration Drift visualization on the 2024 and 2026 data. In the 2024 figure, anchor calibration drift is concentrated towards 0% and begins to fray between 2.5% to 7.5% deviation significantly. The remaining fraying seems to happen between 7.5% and 20% deviation primarily, and a few outlier anchors extend above 20%, 30%, and 40%. 
+  
+  As for the 2026 data, anchor calibration drift seems to be concentrated between 0% and 1% mainly, and spreads similarly to the 2024 2.5% to 7.5% region in the 1% to 4% area between day 0 and day 35. This range seems to extend well into 7.5% after day 35. While the outliers drifted between 5% and 15% deviation before day 35, the outlier group is joined by more anchors and extends past 17.5% consistently between day 35 and the end of the recorded period. While the y-axis deviation scale is inconsistent between the two figures, it is clear that the anchor deviation behavior noticeably shifts in the 2026 data. 
+  
+  Due to the significantly lower number of anchors in the 2026 data and the differing time periods, interpreting these figures alone is not enough. If there were 215 or so more anchors in the 2026 data to correspond with the 659 anchors in the 2024 data, perhaps this shift behavior would have been camouflaged by a complement shift down around day 35. Indeed, is not clear that the 2024 figure is completely absent of these kinds of shift either.
+
+\newpage
+
+# 5. Maximum Drift Threshold
 
 ```{r}
 thresholds <- c(
@@ -1495,8 +1522,8 @@ ggplot(
   scale_colour_manual(
     "Threshold",
     values = c(
-      "1%" = "#0868ac",
-      "2%" = "#43a2ca",
+      # "1%" = "#0868ac",
+      # "2%" = "#43a2ca",
       "5%" = "#7bccc4",
       "10%" = "#8c96c6",
       "20%" = "#8856a7"
@@ -1614,7 +1641,7 @@ ggplot(
   scale_colour_manual(
     "Threshold",
     values = c(
-      "1%" = "#0868ac",
+      # "1%" = "#0868ac",
       "2%" = "#43a2ca",
       "5%" = "#7bccc4",
       "10%" = "#8c96c6",
@@ -1627,12 +1654,17 @@ ggplot(
   theme_minimal()
 ```
 
+\newpage
+
+  The Maximum Drift Threshold uses percentage thresholds to illustrate the rate at which the anchors exceed 1%, 2% 5%, 10%, and 20% drift. By day 7, nearly 400 of 659 anchors in the 2024 data have exceeded 1% drift, and around 200 of 659 anchors exceed 2% by day 9. In order to improve interpretability, I have adjusted the y axis for examining the 10% and 20% specific thresholds trends. In this figure, we see that about 20  of 659 anchors exceeded 10% drift, and about 5 of 549 exceeded 20% by the end of the recorded period. This visualization is especially convenient for observing the rate at which the anchors exceed each threshold.
+  
+  For the 2026 data, we use two figures to visualize our threshold details carefully once more. The drift trends for the 2026 data appear to be more conservative than the 2024 data, which is due to the comparatively wider date range and therefore less reliable calibration retrieval (e.g. 9 444 of 899 anchors remain after removing anchors with incomplete series). Nonetheless, the 2026 data demonstrates this shift that we have been noticing around day 35 persists, this time quantifiable as around 10 new anchors reaching 2%, and 5 reaching 5% drift thresholds. 
+  
+  It is especially encouraging to observe that in the 2024 data, the number exceeding the 20% threshold does not exceed 5 anchors, and in 2026, only 1 anchor exceeds 20% after day 77.
 
 \newpage
 
-# 6. Instantaneous Drift Threshold Analysis
-
-This analysis counts the number of anchors that are currently beyond each threshold, rather than the number that have ever exceeded it.
+# 6. Instantaneous Drift Threshold
 
 ```{r}
 drift.proportion.2_2024 <- (
@@ -1701,7 +1733,7 @@ ggplot(
     )
   ) +
   labs(
-    title = "Anchors Exceeding Drift Threshold of 652"
+    title = "2024: Anchors Exceeding Drift Threshold"
   ) +
   theme_minimal()
 ```
@@ -1747,7 +1779,7 @@ ggplot(
     )
   ) +
   labs(
-    title = "Anchors Exceeding 5%, 10%, and 20% Threshold of 652"
+    title = "2024: Anchors Exceeding Drift Threshold"
   ) +
   theme_minimal()
 ```
@@ -1819,7 +1851,7 @@ ggplot(
     )
   ) +
   labs(
-    title = "Anchors Exceeding Drift Threshold of 444"
+    title = "2026: Anchors Exceeding Drift Threshold"
   ) +
   theme_minimal()
 ```
@@ -1864,10 +1896,14 @@ ggplot(
     )
   ) +
   labs(
-    title = "Anchors 5%, 10%, and 20% Threshold of 444"
+    title = "2026: Anchors Exceeding Drift Threshold"
   ) +
   theme_minimal()
 ```
+\newpage
+
+
+
 \newpage
 
 # 7. Direct 2024 vs. 2026 Comparison
@@ -2077,10 +2113,7 @@ The maximum-drift plots measure whether an anchor has **ever** departed from its
 
 The instantaneous-drift plots measure how many anchors are **currently** beyond each threshold. These curves can increase or decrease as anchors move back toward their initial calibration.
 
-A pattern in which maximum drift increases over time while instantaneous drift remains approximately stable would suggest that individual anchors experience deviations but that the overall population does not undergo a systematic accumulation of drift.
+A pattern in which maximum drift increases over time while instantaneous drift remains approximately stable suggests that individual anchors experience deviations but that the overall population does not undergo a systematic accumulation of drift.
 
 The 2024 and 2026 comparisons should be interpreted using calendar time. Missing calibration dates in the 2026 dataset remain gaps in the time axis rather than being compressed into consecutive observation numbers.
-
-The **last two plots** in this QMD are probably the most useful for your actual comparison. They put 2024 and 2026 on the **same percentage scale**, so the fact that you have 444 complete anchors in 2026 versus a different number in 2024 doesn't distort the comparison.
-
 
