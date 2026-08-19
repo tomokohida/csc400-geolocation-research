@@ -4,6 +4,7 @@ format: pdf
 editor: visual
 author: "Tomoko Hida"
 ---
+
 ```{r, echo=FALSE, warning = FALSE, message = FALSE}
 knitr::opts_chunk$set(
   warning = FALSE,
@@ -18,6 +19,7 @@ suppressPackageStartupMessages({
 ```
 
 # Overview
+
 This report compares anchor representation between the 2024 and 2026 calibration datasets.
 
 The purpose is to determine which anchors were sufficiently represented in each calibration period and which anchors were excluded because they did not meet the representation criterion.
@@ -26,10 +28,10 @@ For both 2024 and 2026, an anchor is considered sufficiently represented if it a
 
 This analysis distinguishes between:
 
-* anchors retained in both analyses
-* anchors retained in 2024 but not 2026
-* anchors retained in 2026 but not 2024
-* anchors that appeared in the raw data but were excluded from both analyses
+- anchors retained in both analyses
+- anchors retained in 2024 but not 2026
+- anchors retained in 2026 but not 2024
+- anchors that appeared in the raw data but were excluded from both analyses
 
 \newpage
 
@@ -48,10 +50,11 @@ files_2024 <- list.files(
 len24 <- length(files_2024)
 ```
 
-* Total number of available 2024 calibration files: `r len24`
+- Total number of available 2024 calibration files: `r len24`
 
 ## 1.2 Read 2024 Anchor IDs
-* IDs are immediately converted to char to be consistent with 2026 data
+
+- IDs are immediately converted to char to be consistent with 2026 data
 
 ```{r}
 raw_ids_2024 <- map_dfr(
@@ -127,9 +130,10 @@ retained_2024 <- anchor_counts_2024 %>%
 
 numleft24 <- nrow(retained_2024)
 ```
-* ID must appear in at least 80% of the available 2024 calibration files: `r threshold_2024` of `r len24` files
 
-* Number of retained 2024 anchors: `r numleft24`
+- ID must appear in at least 80% of the available 2024 calibration files: `r threshold_2024` of `r len24` files
+
+- Number of retained 2024 anchors: `r numleft24`
 
 # 2. 2026 Calibration Files
 
@@ -146,7 +150,7 @@ len26 <- length(files_2026)
 
 ## 2.1 Load 2026 Files
 
-* Total number of available 2026 calibration files: `r len26`
+- Total number of available 2026 calibration files: `r len26`
 
 We impose a filtering technique to ensure robustness for our comparatively wider period of calibration data collection for 2026. A number of datasets of the 2026 calibration data contain significantly few IDs, and would inhibit our analysis by presenting many missing data points. The 2026 representation analysis therefore uses only files containing at least 500 IDs.
 
@@ -170,7 +174,8 @@ files_2026_retained <- files_2026[keep_2026]
 
 n_files_2026 <- length(files_2026_retained)
 ```
-* Number of 2026 files retained: `r n_files_2026`
+
+- Number of 2026 files retained: `r n_files_2026`
 
 ## 2.2 Read 2026 Anchor IDs
 
@@ -242,8 +247,8 @@ retained_2026 <- anchor_counts_2026 %>%
 numleft26 <- nrow(retained_2026)
 ```
 
-* ID must appear in at least 80% of the usable 2026 calibration files: `r threshold_2026` of `r n_files_2026` files
-* Number of retained 2026 anchors: `r numleft26`
+- ID must appear in at least 80% of the usable 2026 calibration files: `r threshold_2026` of `r n_files_2026` files
+- Number of retained 2026 anchors: `r numleft26`
 
 \newpage
 
@@ -298,6 +303,7 @@ retained_both <- inner_join(
 # View the IDs:
 # retained_both
 ```
+
 Number retained in both: `r numretain_2426`
 
 ## 3.2 Anchors Retained in 2024 but Not 2026
@@ -314,6 +320,7 @@ n24only <- nrow(retained_2024_only)
 # IDs:
 # retained_2024_only
 ```
+
 `r n24only` anchors met the 80% criterion in 2024 but did not meet it in 2026.
 
 ## 3.3 Anchors Retained in 2026 but Not 2024
@@ -365,9 +372,9 @@ unique26all <- nrow(all_raw_2026)
 
 An anchor is considered excluded from both analyses if:
 
-* it appeared in the raw 2024 and/or 2026 data
-* it did not meet the 80% criterion in 2024
-* it did not meet the 80% criterion in 2026
+- it appeared in the raw 2024 and/or 2026 data
+- it did not meet the 80% criterion in 2024
+- it did not meet the 80% criterion in 2026
 
 ```{r}
 # complete set of anchors observed in either year
@@ -689,9 +696,9 @@ kable(head(poorly_represented))
 
 ## 4.3 Final Interpretation
 
-1. **Stable/repeated anchors:** retained in both 2024 and 2026 analyses
-2. **Year-specific anchors:** retained in one calibration period but not the other
-3. **Intermittent anchors:** observed in the raw data but excluded entirely
+1.  **Stable/repeated anchors:** retained in both 2024 and 2026 analyses
+2.  **Year-specific anchors:** retained in one calibration period but not the other
+3.  **Intermittent anchors:** observed in the raw data but excluded entirely
 
 The "Intermittent anchors" group represents anchors with consistent changes in anchor availability, connectivity, or geographic coverage. In order to reduce computational overhead and accuracy, a first step may be to exclude these anchors as input to our geolocation algorithm.
 

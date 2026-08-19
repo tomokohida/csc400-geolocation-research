@@ -103,7 +103,7 @@ raw_2024 <- raw_2024 %>%
 ```
 
 ```{r}
-# Check the date range
+## Check the date range
 # data.frame(
 #   first_date = min(raw_2024$date),
 #   last_date = max(raw_2024$date),
