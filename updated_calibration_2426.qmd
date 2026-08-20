@@ -2099,6 +2099,141 @@ thresholds.pct <- c(
 ```
 
 ```{r}
+drift.proportion_2024_20 <- (
+  crossing(
+    cooked_2024,
+    threshold = thresholds
+  )
+  |> group_by(
+    threshold,
+    days
+  )
+  |> mutate(
+    result_col = if_else(max.drift > threshold, 1, 0)
+  )
+  |> mutate(
+    threshold = ordered(
+      threshold,
+      levels = thresholds,
+      labels = thresholds.pct
+    )
+  ) |>
+    filter(result_col == 1) |>
+    filter(threshold == "20%")
+)
+
+unique_ID_20 <- unique(drift.proportion_2024_20$id)
+```
+
+```{r}
+drift.proportion_2024_10 <- (
+  crossing(
+    cooked_2024,
+    threshold = thresholds
+  )
+  |> group_by(
+    threshold,
+    days
+  )
+  |> mutate(
+    result_col = if_else(max.drift > threshold, 1, 0)
+  )
+  |> mutate(
+    threshold = ordered(
+      threshold,
+      levels = thresholds,
+      labels = thresholds.pct
+    )
+  ) |>
+    filter(result_col == 1) |>
+    filter(threshold == "10%")
+)
+
+unique_ID_10 <- unique(drift.proportion_2024_10$id)
+```
+
+```{r}
+drift.proportion_2024_5 <- (
+  crossing(
+    cooked_2024,
+    threshold = thresholds
+  )
+  |> group_by(
+    threshold,
+    days
+  )
+  |> mutate(
+    result_col = if_else(max.drift > threshold, 1, 0)
+  )
+  |> mutate(
+    threshold = ordered(
+      threshold,
+      levels = thresholds,
+      labels = thresholds.pct
+    )
+  ) |>
+    filter(result_col == 1) |>
+    filter(threshold == "5%")
+)
+
+unique_ID_5 <- unique(drift.proportion_2024_5$id)
+```
+
+```{r}
+drift.proportion_2024_2 <- (
+  crossing(
+    cooked_2024,
+    threshold = thresholds
+  )
+  |> group_by(
+    threshold,
+    days
+  )
+  |> mutate(
+    result_col = if_else(max.drift > threshold, 1, 0)
+  )
+  |> mutate(
+    threshold = ordered(
+      threshold,
+      levels = thresholds,
+      labels = thresholds.pct
+    )
+  ) |>
+    filter(result_col == 1) |>
+    filter(threshold == "2%")
+)
+
+unique_ID_2 <- unique(drift.proportion_2024_2$id)
+```
+
+```{r}
+drift.proportion_2024_1 <- (
+  crossing(
+    cooked_2024,
+    threshold = thresholds
+  )
+  |> group_by(
+    threshold,
+    days
+  )
+  |> mutate(
+    result_col = if_else(max.drift > threshold, 1, 0)
+  )
+  |> mutate(
+    threshold = ordered(
+      threshold,
+      levels = thresholds,
+      labels = thresholds.pct
+    )
+  ) |>
+    filter(result_col == 1) |>
+    filter(threshold == "1%")
+)
+
+unique_ID_1 <- unique(drift.proportion_2024_1$id)
+```
+
+```{r}
 drift.proportion_2024 <- (
   crossing(
     cooked_2024,
@@ -2216,7 +2351,149 @@ ggplot(
   theme_minimal()
 ```
 
+```{r}
+# kable(unique_ID_20, caption = "IDs excceeding 20% Threshold")
+# kable(unique_ID_10, caption = "IDs excceeding 10% Threshold")
+# kable(unique_ID_5, caption = "IDs excceeding 5% Threshold")
+```
+
+
 \newpage
+
+```{r}
+drift.proportion_2026_20 <- (
+  crossing(
+    cooked_2026,
+    threshold = thresholds
+  )
+  |> group_by(
+    threshold,
+    days
+  )
+  |> mutate(
+    result_col = if_else(max.drift > threshold, 1, 0)
+  )
+  |> mutate(
+    threshold = ordered(
+      threshold,
+      levels = thresholds,
+      labels = thresholds.pct
+    )
+  ) |>
+    filter(result_col == 1) |>
+    filter(threshold == "20%")
+)
+
+unique26_ID_20 <- unique(drift.proportion_2026_20$id)
+```
+
+```{r}
+drift.proportion_2026_10 <- (
+  crossing(
+    cooked_2026,
+    threshold = thresholds
+  )
+  |> group_by(
+    threshold,
+    days
+  )
+  |> mutate(
+    result_col = if_else(max.drift > threshold, 1, 0)
+  )
+  |> mutate(
+    threshold = ordered(
+      threshold,
+      levels = thresholds,
+      labels = thresholds.pct
+    )
+  ) |>
+    filter(result_col == 1) |>
+    filter(threshold == "10%")
+)
+
+unique26_ID_10 <- unique(drift.proportion_2026_10$id)
+```
+
+```{r}
+drift.proportion_2026_5 <- (
+  crossing(
+    cooked_2026,
+    threshold = thresholds
+  )
+  |> group_by(
+    threshold,
+    days
+  )
+  |> mutate(
+    result_col = if_else(max.drift > threshold, 1, 0)
+  )
+  |> mutate(
+    threshold = ordered(
+      threshold,
+      levels = thresholds,
+      labels = thresholds.pct
+    )
+  ) |>
+    filter(result_col == 1) |>
+    filter(threshold == "5%")
+)
+
+unique26_ID_5 <- unique(drift.proportion_2026_5$id)
+```
+
+```{r}
+drift.proportion_2026_2 <- (
+  crossing(
+    cooked_2026,
+    threshold = thresholds
+  )
+  |> group_by(
+    threshold,
+    days
+  )
+  |> mutate(
+    result_col = if_else(max.drift > threshold, 1, 0)
+  )
+  |> mutate(
+    threshold = ordered(
+      threshold,
+      levels = thresholds,
+      labels = thresholds.pct
+    )
+  ) |>
+    filter(result_col == 1) |>
+    filter(threshold == "2%")
+)
+
+unique26_ID_2 <- unique(drift.proportion_2026_2$id)
+```
+
+```{r}
+drift.proportion_2026_1 <- (
+  crossing(
+    cooked_2026,
+    threshold = thresholds
+  )
+  |> group_by(
+    threshold,
+    days
+  )
+  |> mutate(
+    result_col = if_else(max.drift > threshold, 1, 0)
+  )
+  |> mutate(
+    threshold = ordered(
+      threshold,
+      levels = thresholds,
+      labels = thresholds.pct
+    )
+  ) |>
+    filter(result_col == 1) |>
+    filter(threshold == "1%")
+)
+
+unique26_ID_1 <- unique(drift.proportion_2026_1$id)
+```
 
 ```{r}
 drift.proportion_2026 <- (
@@ -2316,7 +2593,7 @@ ggplot(
     "# anchors drifted past threshold",
     limits = c(
       0,
-      50
+      80
     )
   ) +
   scale_colour_manual(
@@ -2337,20 +2614,29 @@ ggplot(
 
 \newpage
 
-## 4.1 
+## 4.1 Observations/Discussion
 
-  The Maximum Drift Threshold uses percentage thresholds to illustrate the rate at which the anchors exceed 1%, 2% 5%, 10%, and 20% drift. By day 7, nearly 400 of 659 anchors in the 2024 data have exceeded 1% drift, and around 200 of 659 anchors exceed 2% by day 9. In order to improve interpretability, I have adjusted the y axis for examining the 10% and 20% specific thresholds trends. In this figure, we see that about 20  of 659 anchors exceeded 10% drift, and about 5 of 549 exceeded 20% by the end of the recorded period. This visualization is especially convenient for observing the rate at which the anchors exceed each threshold.
+  The Maximum Drift Threshold uses percentage thresholds to illustrate the rate at which the anchors exceed 1%, 2% 5%, 10%, and 20% drift. By day 7, nearly 400 of 659 anchors in the 2024 data have exceeded 1% drift, and around 200 of 659 anchors exceed 2% by day 9. In order to improve interpretability, I have adjusted the y axis for examining the 10% and 20% specific thresholds trends. In this figure, we see that about 20 of 659 anchors exceeded 10% drift, and about 5 of 659 exceeded 20% by the end of the recorded period. This visualization is especially convenient for observing the rate at which the anchors collectively exceed each threshold.
   
-  For the 2026 data, we use two figures to visualize our threshold details carefully once more. The drift trends for the 2026 data appear to be more conservative than the 2024 data, which is due to the comparatively wider date range and therefore less reliable calibration retrieval (e.g. 9 444 of 899 anchors remain after removing anchors with incomplete series). Nonetheless, the 2026 data demonstrates this shift that we have been noticing around day 35 persists, this time quantifiable as around 10 new anchors reaching 2%, and 5 reaching 5% drift thresholds. 
+  For the 2026 data, we use two figures to visualize our threshold details carefully once more. The drift trends for the 2026 data appear to be more conservative than the 2024 data, which is due to the comparatively wider date range and therefore less consistent calibration retrieval (leaving us with 444 of 899 anchors). Nonetheless, this shift that we have been noticing around day 35 persists, this time quantifiable as around 30 new anchors reaching 2%, and 20 additional anchors reaching 5% drift thresholds. It appears that a total of around 25 anchors reach the 10% threshold by day 77, and only 1 anchor exceeds 20% over the entire recorded period.
   
-  It is especially encouraging to observe that in the 2024 data, the number exceeding the 20% threshold does not exceed 5 anchors, and in 2026, only 1 anchor exceeds 20% after day 77.
+  It is especially encouraging to observe that in the 2024 data, the number exceeding the 20% threshold does not exceed 5 anchors, and in 2026, 
 
+## 4.2 Anchor IDs that Exceeded 20%, 10%, and 5%
 
+**2024: 659 Anchors**
 
-At any point, make table for percent drift table for IDs, top will be the highest drift, then the lower drifts, and then lower like ID 8 exceeded 20%
-6 and 8 exceeded 10%
-6 ad 9 and 0 and 3 exceeded 5%
-and within each table its ordered by % exceeded
+4 Anchor IDs Exceeded 20%: 7192, 7198, 7207, 7222
+
+21 Anchor IDs Exceeded 10%: _6392, 6398, 6410, 6586, 6718, 6782, 6882, 6887, 6935, 6977, 6994, 7050, 7077, 7078,_ **7192**, **7198**, **7207**, _7219_, **7222**, _7239, 7251_
+
+**2026: 444 Anchors**
+
+1 Anchor ID Exceeded 20%: 7198
+
+26 Anchor IDs Exceeded 10%: 6313, 6325, 6360, 6509, _6696_, 6809, 6841, 6922, _6954_, 7003, 7008, 7011, 7097, _7128_, 7169, _7181_, **7198**, 7216, 7225, _7456_, _7502, 7511, 7574, 7616, 7635, 7680_
+
+We previously discussed anchor ID 7198 in Table 6, concerning anchors associated with AS3491. The anchor occupied the 90-99.9th percentile range for 27 of 29 days in 2024, and 20 of 80 days in 2026. The other IDs 7192, 7207, and 7222 that exceeded 20% in 2024 and do not appear in the ID summaries from _Section 3.4_ and _Section 3.5_. The italicized anchors are all omitted from the _Section 3.4_ and _Section 3.5_ summaries, and provide new data for us to consider in terms of a new subset of outlier anchors.
 
 \newpage
 
@@ -2865,7 +3151,7 @@ ggplot(
 ```
 \newpage
 
-add mean or median values for each threshold line, note value
+## 6.1 add mean or median values for each threshold line, note value
 
 \newpage
 
