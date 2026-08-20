@@ -1330,10 +1330,550 @@ This table lists Germany, the United States, Singapore, Austria, France, Italy, 
 
 \newpage
 
-## 3.3 Flaw with Maximum Calibration Drift Visualization: Day 0 as Ground Truth
-If we look at the actual day in range proportions of the anchors included in the figures above, we see that some of them occupied the range 1 time in 2024 and 79 out of 80 times in 2026. What this likely demonstrates is that the day 0 calibration measurement for 2026 was an outlier, and for the 79 out of 80 days, the calibration value returned to its ground truth calibration range. However, what gets recorded in the chart is an occupying of the range strictly with respect to the day 0 measurement.
 
-Take a look at the individual anchors associated with the ASN Frequency Table 2:
+## 3.3 Visualizing Repeated ASN in 90-99.9th Percentile Range
+
+### 3.3.1 AS14061
+
+```{r}
+cooked_2024_specific3 <- left_join(cleaned_persistent_90_999_both_geo, cooked_2024) %>%
+  select(asn, id, date, calibration, days, drift, max.drift)
+
+cooked_2024_specific31 <- left_join(asn_repeated, cooked_2024_specific3) %>% 
+  select(asn, id, date, calibration, days, drift, max.drift) %>%
+  filter(asn == 14061)
+
+cooked_2026_specific3 <- left_join(cleaned_persistent_90_999_both_geo, cooked_2026) %>%
+  select(asn, id, date, calibration, days, drift, max.drift)
+
+cooked_2026_specific31 <- left_join(asn_repeated, cooked_2026_specific3) %>% 
+  select(asn, id, date, calibration, days, drift, max.drift) %>%
+  filter(asn == 14061)
+```
+```{r}
+ggplot(
+  cooked_2024_specific31,
+  aes(
+    x = days,
+    y = max.drift,
+    group = id
+  )
+) +
+  
+  # Individual anchor trajectories
+  geom_step(
+    alpha = 0.5,
+    linewidth = 0.4,
+    color = "black"
+  ) +
+  
+  labs(
+    title = "2024 Maximum Calibration Drift, AS14061 Anchors",
+    x = "Days since first calibration",
+    y = "Maximum deviation from Day 0"
+  ) +
+  
+  scale_y_continuous(
+    labels = scales::percent_format(
+      accuracy = 1
+    )
+  ) +
+  
+  theme_minimal() +
+  
+  theme(
+    legend.position = "right"
+  )
+```
+
+```{r}
+ggplot(
+  cooked_2026_specific31,
+  aes(
+    x = days,
+    y = max.drift,
+    group = id
+  )
+) +
+  
+  # Individual anchor trajectories
+  geom_step(
+    alpha = 0.5,
+    linewidth = 0.4,
+    color = "black"
+  ) +
+  labs(
+    title = "2026 Maximum Calibration Drift, AS14061 Anchors",
+    x = "Days since first calibration",
+    y = "Maximum deviation from Day 0"
+  ) +
+  
+  scale_y_continuous(
+    labels = scales::percent_format(
+      accuracy = 1
+    )
+  ) +
+  
+  theme_minimal() +
+  
+  theme(
+    legend.position = "right"
+  )
+```
+
+### 3.3.2 AS16276
+
+```{r}
+cooked_2024_specific3 <- left_join(cleaned_persistent_90_999_both_geo, cooked_2024) %>%
+  select(asn, id, date, calibration, days, drift, max.drift)
+
+cooked_2024_specific31 <- left_join(asn_repeated, cooked_2024_specific3) %>% 
+  select(asn, id, date, calibration, days, drift, max.drift) %>%
+  filter(asn == 16276)
+
+cooked_2026_specific3 <- left_join(cleaned_persistent_90_999_both_geo, cooked_2026) %>%
+  select(asn, id, date, calibration, days, drift, max.drift)
+
+cooked_2026_specific31 <- left_join(asn_repeated, cooked_2026_specific3) %>% 
+  select(asn, id, date, calibration, days, drift, max.drift) %>%
+  filter(asn == 16276)
+```
+```{r}
+ggplot(
+  cooked_2024_specific31,
+  aes(
+    x = days,
+    y = max.drift,
+    group = id
+  )
+) +
+  
+  # Individual anchor trajectories
+  geom_step(
+    alpha = 0.5,
+    linewidth = 0.4,
+    color = "black"
+  ) +
+  
+  labs(
+    title = "2024 Maximum Calibration Drift, AS16276 Anchors",
+    x = "Days since first calibration",
+    y = "Maximum deviation from Day 0"
+  ) +
+  
+  scale_y_continuous(
+    labels = scales::percent_format(
+      accuracy = 1
+    )
+  ) +
+  
+  theme_minimal() +
+  
+  theme(
+    legend.position = "right"
+  )
+```
+
+```{r}
+ggplot(
+  cooked_2026_specific31,
+  aes(
+    x = days,
+    y = max.drift,
+    group = id
+  )
+) +
+  
+  # Individual anchor trajectories
+  geom_step(
+    alpha = 0.5,
+    linewidth = 0.4,
+    color = "black"
+  ) +
+  labs(
+    title = "2026 Maximum Calibration Drift, AS16276 Anchors",
+    x = "Days since first calibration",
+    y = "Maximum deviation from Day 0"
+  ) +
+  
+  scale_y_continuous(
+    labels = scales::percent_format(
+      accuracy = 1
+    )
+  ) +
+  
+  theme_minimal() +
+  
+  theme(
+    legend.position = "right"
+  )
+```
+
+
+### 3.3.3 AS3491
+
+```{r}
+cooked_2024_specific3 <- left_join(cleaned_persistent_90_999_both_geo, cooked_2024) %>%
+  select(asn, id, date, calibration, days, drift, max.drift)
+
+cooked_2024_specific31 <- left_join(asn_repeated, cooked_2024_specific3) %>% 
+  select(asn, id, date, calibration, days, drift, max.drift) %>%
+  filter(asn == 3491)
+
+cooked_2026_specific3 <- left_join(cleaned_persistent_90_999_both_geo, cooked_2026) %>%
+  select(asn, id, date, calibration, days, drift, max.drift)
+
+cooked_2026_specific31 <- left_join(asn_repeated, cooked_2026_specific3) %>% 
+  select(asn, id, date, calibration, days, drift, max.drift) %>%
+  filter(asn == 3491)
+```
+```{r}
+ggplot(
+  cooked_2024_specific31,
+  aes(
+    x = days,
+    y = max.drift,
+    group = id
+  )
+) +
+  
+  # Individual anchor trajectories
+  geom_step(
+    alpha = 0.5,
+    linewidth = 0.4,
+    color = "black"
+  ) +
+  
+  labs(
+    title = "2024 Maximum Calibration Drift, AS3491 Anchors",
+    x = "Days since first calibration",
+    y = "Maximum deviation from Day 0"
+  ) +
+  
+  scale_y_continuous(
+    labels = scales::percent_format(
+      accuracy = 1
+    )
+  ) +
+  
+  theme_minimal() +
+  
+  theme(
+    legend.position = "right"
+  )
+```
+
+```{r}
+ggplot(
+  cooked_2026_specific31,
+  aes(
+    x = days,
+    y = max.drift,
+    group = id
+  )
+) +
+  
+  # Individual anchor trajectories
+  geom_step(
+    alpha = 0.5,
+    linewidth = 0.4,
+    color = "black"
+  ) +
+  labs(
+    title = "2026 Maximum Calibration Drift, AS3491 Anchors",
+    x = "Days since first calibration",
+    y = "Maximum deviation from Day 0"
+  ) +
+  
+  scale_y_continuous(
+    labels = scales::percent_format(
+      accuracy = 1
+    )
+  ) +
+  
+  theme_minimal() +
+  
+  theme(
+    legend.position = "right"
+  )
+```
+
+### 3.3.4 AS57695
+
+```{r}
+cooked_2024_specific3 <- left_join(cleaned_persistent_90_999_both_geo, cooked_2024) %>%
+  select(asn, id, date, calibration, days, drift, max.drift)
+
+cooked_2024_specific31 <- left_join(asn_repeated, cooked_2024_specific3) %>% 
+  select(asn, id, date, calibration, days, drift, max.drift) %>%
+  filter(asn == 57695)
+
+cooked_2026_specific3 <- left_join(cleaned_persistent_90_999_both_geo, cooked_2026) %>%
+  select(asn, id, date, calibration, days, drift, max.drift)
+
+cooked_2026_specific31 <- left_join(asn_repeated, cooked_2026_specific3) %>% 
+  select(asn, id, date, calibration, days, drift, max.drift) %>%
+  filter(asn == 57695)
+```
+```{r}
+ggplot(
+  cooked_2024_specific31,
+  aes(
+    x = days,
+    y = max.drift,
+    group = id
+  )
+) +
+  
+  # Individual anchor trajectories
+  geom_step(
+    alpha = 0.5,
+    linewidth = 0.4,
+    color = "black"
+  ) +
+  
+  labs(
+    title = "2024 Maximum Calibration Drift, AS57695 Anchors",
+    x = "Days since first calibration",
+    y = "Maximum deviation from Day 0"
+  ) +
+  
+  scale_y_continuous(
+    labels = scales::percent_format(
+      accuracy = 1
+    )
+  ) +
+  
+  theme_minimal() +
+  
+  theme(
+    legend.position = "right"
+  )
+```
+
+```{r}
+ggplot(
+  cooked_2026_specific31,
+  aes(
+    x = days,
+    y = max.drift,
+    group = id
+  )
+) +
+  
+  # Individual anchor trajectories
+  geom_step(
+    alpha = 0.5,
+    linewidth = 0.4,
+    color = "black"
+  ) +
+  
+  labs(
+    title = "2026 Maximum Calibration Drift, AS57695 Anchors",
+    x = "Days since first calibration",
+    y = "Maximum deviation from Day 0"
+  ) +
+  
+  scale_y_continuous(
+    labels = scales::percent_format(
+      accuracy = 1
+    )
+  ) +
+  
+  theme_minimal() +
+  
+  theme(
+    legend.position = "right"
+  )
+```
+
+
+### 3.3.5 AS36236
+
+```{r}
+cooked_2024_specific3 <- left_join(cleaned_persistent_90_999_both_geo, cooked_2024) %>%
+  select(asn, id, date, calibration, days, drift, max.drift)
+
+cooked_2024_specific31 <- left_join(asn_repeated, cooked_2024_specific3) %>% 
+  select(asn, id, date, calibration, days, drift, max.drift) %>%
+  filter(asn == 36236)
+
+cooked_2026_specific3 <- left_join(cleaned_persistent_90_999_both_geo, cooked_2026) %>%
+  select(asn, id, date, calibration, days, drift, max.drift)
+
+cooked_2026_specific31 <- left_join(asn_repeated, cooked_2026_specific3) %>% 
+  select(asn, id, date, calibration, days, drift, max.drift) %>%
+  filter(asn == 36236)
+```
+```{r}
+ggplot(
+  cooked_2024_specific31,
+  aes(
+    x = days,
+    y = max.drift,
+    group = id
+  )
+) +
+  
+  # Individual anchor trajectories
+  geom_step(
+    alpha = 0.5,
+    linewidth = 0.4,
+    color = "black"
+  ) +
+  
+  labs(
+    title = "2024 Maximum Calibration Drift, AS36236 Anchors",
+    x = "Days since first calibration",
+    y = "Maximum deviation from Day 0"
+  ) +
+  
+  scale_y_continuous(
+    labels = scales::percent_format(
+      accuracy = 1
+    )
+  ) +
+  
+  theme_minimal() +
+  
+  theme(
+    legend.position = "right"
+  )
+```
+
+```{r}
+ggplot(
+  cooked_2026_specific31,
+  aes(
+    x = days,
+    y = max.drift,
+    group = id
+  )
+) +
+  
+  # Individual anchor trajectories
+  geom_step(
+    alpha = 0.5,
+    linewidth = 0.4,
+    color = "black"
+  ) +
+  
+  labs(
+    title = "2026 Maximum Calibration Drift, AS36236 Anchors",
+    x = "Days since first calibration",
+    y = "Maximum deviation from Day 0"
+  ) +
+  
+  scale_y_continuous(
+    labels = scales::percent_format(
+      accuracy = 1
+    )
+  ) +
+  
+  theme_minimal() +
+  
+  theme(
+    legend.position = "right"
+  )
+```
+
+### 3.3.5 AS197540
+
+```{r}
+cooked_2024_specific3 <- left_join(cleaned_persistent_90_999_both_geo, cooked_2024) %>%
+  select(asn, id, date, calibration, days, drift, max.drift)
+
+cooked_2024_specific31 <- left_join(asn_repeated, cooked_2024_specific3) %>% 
+  select(asn, id, date, calibration, days, drift, max.drift) %>%
+  filter(asn == 197540)
+
+cooked_2026_specific3 <- left_join(cleaned_persistent_90_999_both_geo, cooked_2026) %>%
+  select(asn, id, date, calibration, days, drift, max.drift)
+
+cooked_2026_specific31 <- left_join(asn_repeated, cooked_2026_specific3) %>% 
+  select(asn, id, date, calibration, days, drift, max.drift) %>%
+  filter(asn == 197540)
+```
+```{r}
+ggplot(
+  cooked_2024_specific31,
+  aes(
+    x = days,
+    y = max.drift,
+    group = id
+  )
+) +
+  
+  # Individual anchor trajectories
+  geom_step(
+    alpha = 0.5,
+    linewidth = 0.4,
+    color = "black"
+  ) +
+  
+  labs(
+    title = "2024 Maximum Calibration Drift, AS197540 Anchors",
+    x = "Days since first calibration",
+    y = "Maximum deviation from Day 0"
+  ) +
+  
+  scale_y_continuous(
+    labels = scales::percent_format(
+      accuracy = 1
+    )
+  ) +
+  
+  theme_minimal() +
+  
+  theme(
+    legend.position = "right"
+  )
+```
+
+```{r}
+ggplot(
+  cooked_2026_specific31,
+  aes(
+    x = days,
+    y = max.drift,
+    group = id
+  )
+) +
+  
+  # Individual anchor trajectories
+  geom_step(
+    alpha = 0.5,
+    linewidth = 0.4,
+    color = "black"
+  ) +
+  
+  labs(
+    title = "2026 Maximum Calibration Drift, AS197540 Anchors",
+    x = "Days since first calibration",
+    y = "Maximum deviation from Day 0"
+  ) +
+  
+  scale_y_continuous(
+    labels = scales::percent_format(
+      accuracy = 1
+    )
+  ) +
+  
+  theme_minimal() +
+  
+  theme(
+    legend.position = "right"
+  )
+```
+
+
+## 3.4 Flaw with Maximum Calibration Drift Visualization: Repeated ASN Behavior and Day 0 as Ground Truth
+
+  Once we visualize the individual anchor behaviors associated with repeated ASNs withi the 90-999 range, we find that the 5 of 6 ASNs maintain maximum drift below 10% with the exception of one anchor in AS16276 that exceeds 10% in 2026. These 5 ASNs that appeared more than once in the 90-999 range seemed to be associated with anchor IDs with erratic behavior, but appear to be rather conservative upon visualizing their drift behavior. AS3491, however, appears to be responsible for shifting the 99.9th percentile towards 25% in 2026, and indeed occupies the 90-999 range comfortably in 2024.
+
+  One ID in AS57675 exceeds 10% drift around day 10 in 2026, but maintains this drift for the remainder of the recorded period. This is Anchor ID 7011, and is in the 90-999 range only once out of 29 days in 2024, but appears in the range 79 of 80 days in 2026. This suggests that the day 0 calibration measurement for 2026 was an outlier, and for the 79 out of 80 days, the calibration value returned to its ground truth calibration range, which was around 10% away from the calibration value recorded on day 0. The maximum drift chart is not enough information to gauge outlier IDs to futher filter our optimal set of reliable IDs, as it determines drift strictly with respect to the day 0 measurement.
+
+Take a look at the individual anchors associated with the ASN Frequency Table 2. Highlighted are two IDs that likely entered the 90-99.9th percentile range due to the strict day 0 ground truth assumption of Maximum Drift visualization.
 
 ```{r}
 rangeanchor_summary_asn <- cleaned_persistent_90_999_both_geo %>%
@@ -1358,33 +1898,463 @@ anchor_summary_197540 <- rangeanchor_summary_asn %>%
 
 kable(anchor_summary_14061, caption = "AS14061 Anchors")
 kable(anchor_summary_16276, caption = "AS16276 Anchors")
-kable(anchor_summary_3491, caption = "AS3491 Anchors")
+kable(anchor_summary_3491, caption = "AS3491 Anchors") %>% kable_styling() %>% row_spec(3, background = "yellow")
 ```
-
-\newpage
-
 ```{r}
 kable(anchor_summary_57695, caption = "AS57695 Anchors") %>% kable_styling() %>% row_spec(3, background = "yellow")
 kable(anchor_summary_36236, caption = "AS36236 Anchors")
 kable(anchor_summary_197540, caption = "AS197540 Anchors")
 ```
 
-## 3.4 Geographic Context of Single Anchor Associated ASNs in the 90-99.9 Range
 
-look at anchors_90_999_2024 and anchors_90_999_2026 and see if the biggest contributor to the 90-999 range is made of single ASN associated IDs. Map the average percentiles of the repeated ASN IDs. they should be on the lower side. look up the ASNs that are the worst, so single IDs that have the most counts for being in the 90-999 range.
 
-get ASN summary for asns that are associated with 1 anchor only, find the ones with the most counts for being in the range, discuss asns and geography, confirm with country frequency table?
+## 3.5 Geographic Context of Single Anchor Associated ASNs in the 90-99.9 Range
+
+Due to the generally conservative nature of the IDs associated with ASNs frequently appearing in the 90-999 range, we must not overlook the ASNs making individual appearances. Of course, we maintain AS3941 as being associated with frequent outlier drift behavior amongst the repeated ASNs. We will first take a look at the IDs that are associated with unique ASNs that entered the 90-999 range. 
+
+To pare down the IDs for further analysis, we will take away the likely misplaced IDs due to the day 0 ground truth procedure. These IDs will be highlighted in yellow.
+
 ```{r}
-asn_repeated <- asn_summary %>%
-  filter(anchors == 1)
+# get ASN summary for asns that are associated with 1 anchor only, find the ones with the most counts for being in the range, discuss asns and geography, confirm with country frequency table?
+rangeanchor_summary_single_asn <- cleaned_persistent_90_999_both_geo %>%
+  rename(in_range_24 = days_in_range.x, 
+         in_range_26 = days_in_range.y,
+         total_24 = total_days.x,
+         total26 = total_days.y) %>%
+  select(asn, id, in_range_24, total_24, in_range_26, total26, country, city) %>%
+  arrange(in_range_24) %>%
+  filter(asn != 14061,
+         asn != 16276,
+         asn != 3491,
+         asn != 57695, 
+         asn != 36236, 
+         asn != 197540)
 
-kable(asn_repeated, caption = "ASN Frequency")
+kable(rangeanchor_summary_single_asn, caption = "Anchors Associated with Unique ASNs") %>% kable_styling(position = "center") %>% 
+  row_spec(c(2, 5, 18, 19, 22, 30, 52, 64, 70, 71, 72, 73), background = "yellow")
 ```
 
+```{r}
+cooked_2024_specific <- left_join(cleaned_persistent_90_999_both_geo, cooked_2024) %>%
+  select(asn, id, date, calibration, days, drift, max.drift) %>%
+  filter(id != 6313, 
+         id != 6328, 
+         id != 6762, 
+         id != 6794, 
+         id != 6874, 
+         # id != 7011, 
+         # id != 7097, 
+         # id != 7238, 
+         # id != 7261, 
+         id != 7043, 
+         id != 7221, 
+         id != 6962, 
+         id != 6443,
+         # id != 7078, 
+         id != 6639, 
+         id != 6323) %>%
+  filter(asn != 14061,
+         asn != 16276,
+         asn != 3491,
+         asn != 57695, 
+         asn != 36236, 
+         asn != 197540) 
+```
 
 \newpage
 
-# 4. Instantaneous Drift
+### 3.5.1 Visualize Anchors with Unique ASNs (after day 0 adjustment)
+```{r}
+ggplot(
+  cooked_2024_specific,
+  aes(
+    x = days,
+    y = max.drift,
+    group = id
+  )
+) +
+  
+  # Individual anchor trajectories
+  geom_step(
+    alpha = 0.5,
+    linewidth = 0.4,
+    color = "black"
+  ) +
+  labs(
+    title = "2024 Maximum Calibration Drift",
+    x = "Days since first calibration",
+    y = "Maximum deviation from Day 0"
+  ) +
+  
+  scale_y_continuous(
+    labels = scales::percent_format(
+      accuracy = 1
+    )
+  ) +
+  
+  theme_minimal() +
+  
+  theme(
+    legend.position = "right"
+  )
+```
+
+```{r}
+cooked_2026_specific2 <- left_join(cleaned_persistent_90_999_both_geo, cooked_2026) %>%
+  select(asn, id, date, calibration, days, drift, max.drift) %>%
+  filter(id != 6313, 
+         id != 6328, 
+         id != 6762, 
+         id != 6794, 
+         id != 6874, 
+         # id != 7011, 
+         # id != 7097, 
+         # id != 7238, 
+         # id != 7261, 
+         id != 7043, 
+         id != 7221,
+         id != 6443,
+         id != 6962, 
+         # id != 7078, 
+         id != 6639, 
+         id != 6323) %>%
+  filter(asn != 14061,
+         asn != 16276,
+         asn != 3491,
+         asn != 57695, 
+         asn != 36236, 
+         asn != 197540) 
+```
+
+```{r}
+ggplot(
+  cooked_2026_specific2,
+  aes(
+    x = days,
+    y = max.drift,
+    group = id
+  )
+) +
+  
+  # Individual anchor trajectories
+  geom_step(
+    alpha = 0.5,
+    linewidth = 0.4,
+    color = "black"
+  ) +
+  labs(
+    title = "2026 Maximum Calibration Drift",
+    x = "Days since first calibration",
+    y = "Maximum deviation from Day 0"
+  ) +
+  
+  scale_y_continuous(
+    labels = scales::percent_format(
+      accuracy = 1
+    )
+  ) +
+  
+  theme_minimal() +
+  
+  theme(
+    legend.position = "right"
+  )
+```
+
+
+```{r}
+# asn_repeated <- asn_summary %>%
+#   filter(anchors == 1)
+# 
+# kable(asn_repeated, caption = "ASN Frequency")
+```
+
+
+### 3.5.2 Resulting Visualizations Discussion
+
+  We were able to take the anchors responsible for the upper bound of the 90-99.9th percentile maximum drift range by filtering out repeated ASNs with conservative behavior and 11 IDs that were likely misrepresented due to the day 0 measurement. The 90-999 range that originally spanned between 0-40% deviation in 2024 spans 0-10% deviation after filtering, and the 90-999 range that spanned 0-25% spans 0-22% after filtering in 2026. The 2026 data demonstrates a shift up in nearly all anchors after day 35, which limits our range-reducing capabilities for said period. That said, this process of identifying outlier IDs by means of the Maximum Deviation Visualization is quite granular and unreasonable for wider periods of data collection. 
+
+  Using Zach's 2024 analysis as a reference once again, the Maximum Drift Threshold Visualization offers another perspective in understanding our data. The following visualizations retain all anchor IDs and ASNs that were removed in the previous section, and represents the same data as the Maximum Drift Visualizations in _Section 3. Maximum Drift._
+
+\newpage
+
+# 4. Maximum Drift Threshold
+
+```{r}
+thresholds <- c(
+  0.01,
+  0.02,
+  0.05,
+  0.10,
+  0.20
+)
+
+thresholds.pct <- c(
+  "1%",
+  "2%",
+  "5%",
+  "10%",
+  "20%"
+)
+```
+
+```{r}
+drift.proportion_2024 <- (
+  crossing(
+    cooked_2024,
+    threshold = thresholds
+  )
+  |> group_by(
+    threshold,
+    days
+  )
+  |> summarise(
+    drifted.above = sum(
+      max.drift > threshold
+    ),
+    .groups = "drop"
+  )
+  |> mutate(
+    threshold = ordered(
+      threshold,
+      levels = thresholds,
+      labels = thresholds.pct
+    )
+  )
+)
+```
+
+```{r}
+ggplot(
+  drift.proportion_2024,
+  aes(
+    x = days,
+    y = drifted.above,
+    colour = threshold,
+    group = threshold
+  )
+) +
+  geom_step(linewidth = 1) +
+  scale_x_continuous(
+    "Calendar days since first calibration",
+    limits = c(
+      0,
+      max(cooked_2024$days)
+    ),
+    breaks = seq(
+      0,
+      max(cooked_2024$days),
+      by = 7
+    )
+  ) +
+  scale_y_continuous(
+    "# anchors drifted past threshold",
+    limits = c(
+      0,
+      n_distinct(cooked_2024$id)
+    )
+  ) +
+  scale_colour_manual(
+    "Threshold",
+    values = c(
+      "1%" = "#0868ac",
+      "2%" = "#43a2ca",
+      "5%" = "#7bccc4",
+      "10%" = "#8c96c6",
+      "20%" = "#8856a7"
+    )
+  ) +
+  labs(
+    title = "2024: Anchors Ever Exceeding Drift Threshold"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+ggplot(
+  drift.proportion_2024,
+  aes(
+    x = days,
+    y = drifted.above,
+    colour = threshold,
+    group = threshold
+  )
+) +
+  geom_step(linewidth = 1) +
+  scale_x_continuous(
+    "Calendar days since first calibration",
+    limits = c(
+      0,
+      max(cooked_2024$days)
+    ),
+    breaks = seq(
+      0,
+      max(cooked_2024$days),
+      by = 7
+    )
+  ) +
+  scale_y_continuous(
+    "# anchors drifted past threshold",
+    limits = c(
+      0,
+      50
+    )
+  ) +
+  scale_colour_manual(
+    "Threshold",
+    values = c(
+      # "1%" = "#0868ac",
+      # "2%" = "#43a2ca",
+      "5%" = "#7bccc4",
+      "10%" = "#8c96c6",
+      "20%" = "#8856a7"
+    )
+  ) +
+  labs(
+    title = "2024: Anchors Ever Exceeding Drift Threshold (y-axis adj)"
+  ) +
+  theme_minimal()
+```
+
+\newpage
+
+```{r}
+drift.proportion_2026 <- (
+  crossing(
+    cooked_2026,
+    threshold = thresholds
+  )
+  |> group_by(
+    threshold,
+    days
+  )
+  |> summarise(
+    drifted.above = sum(
+      max.drift > threshold
+    ),
+    .groups = "drop"
+  )
+  |> mutate(
+    threshold = ordered(
+      threshold,
+      levels = thresholds,
+      labels = thresholds.pct
+    )
+  )
+)
+```
+
+```{r}
+ggplot(
+  drift.proportion_2026,
+  aes(
+    x = days,
+    y = drifted.above,
+    colour = threshold,
+    group = threshold
+  )
+) +
+  geom_step(linewidth = 1) +
+  scale_x_continuous(
+    "Calendar days since first calibration",
+    limits = c(
+      0,
+      max(cooked_2026$days)
+    ),
+    breaks = seq(
+      0,
+      max(cooked_2026$days),
+      by = 7
+    )
+  ) +
+  scale_y_continuous(
+    "# anchors drifted past threshold",
+    limits = c(
+      0,
+      n_distinct(cooked_2026$id)
+    )
+  ) +
+  scale_colour_manual(
+    "Threshold",
+    values = c(
+      "1%" = "#0868ac",
+      "2%" = "#43a2ca",
+      "5%" = "#7bccc4",
+      "10%" = "#8c96c6",
+      "20%" = "#8856a7"
+    )
+  ) +
+  labs(
+    title = "2026: Anchors Ever Exceeding Drift Threshold"
+  ) +
+  theme_minimal()
+```
+```{r}
+ggplot(
+  drift.proportion_2026,
+  aes(
+    x = days,
+    y = drifted.above,
+    colour = threshold,
+    group = threshold
+  )
+) +
+  geom_step(linewidth = 1) +
+  scale_x_continuous(
+    "Calendar days since first calibration",
+    limits = c(
+      0,
+      max(cooked_2026$days)
+    ),
+    breaks = seq(
+      0,
+      max(cooked_2026$days),
+      by = 7
+    )
+  ) +
+  scale_y_continuous(
+    "# anchors drifted past threshold",
+    limits = c(
+      0,
+      50
+    )
+  ) +
+  scale_colour_manual(
+    "Threshold",
+    values = c(
+      # "1%" = "#0868ac",
+      "2%" = "#43a2ca",
+      "5%" = "#7bccc4",
+      "10%" = "#8c96c6",
+      "20%" = "#8856a7"
+    )
+  ) +
+  labs(
+    title = "2026: Anchors Ever Exceeding Drift Threshold (y-axis adj)"
+  ) +
+  theme_minimal()
+```
+
+\newpage
+
+## 4.1 
+
+  The Maximum Drift Threshold uses percentage thresholds to illustrate the rate at which the anchors exceed 1%, 2% 5%, 10%, and 20% drift. By day 7, nearly 400 of 659 anchors in the 2024 data have exceeded 1% drift, and around 200 of 659 anchors exceed 2% by day 9. In order to improve interpretability, I have adjusted the y axis for examining the 10% and 20% specific thresholds trends. In this figure, we see that about 20  of 659 anchors exceeded 10% drift, and about 5 of 549 exceeded 20% by the end of the recorded period. This visualization is especially convenient for observing the rate at which the anchors exceed each threshold.
+  
+  For the 2026 data, we use two figures to visualize our threshold details carefully once more. The drift trends for the 2026 data appear to be more conservative than the 2024 data, which is due to the comparatively wider date range and therefore less reliable calibration retrieval (e.g. 9 444 of 899 anchors remain after removing anchors with incomplete series). Nonetheless, the 2026 data demonstrates this shift that we have been noticing around day 35 persists, this time quantifiable as around 10 new anchors reaching 2%, and 5 reaching 5% drift thresholds. 
+  
+  It is especially encouraging to observe that in the 2024 data, the number exceeding the 20% threshold does not exceed 5 anchors, and in 2026, only 1 anchor exceeds 20% after day 77.
+
+
+
+At any point, make table for percent drift table for IDs, top will be the highest drift, then the lower drifts, and then lower like ID 8 exceeded 20%
+6 and 8 exceeded 10%
+6 ad 9 and 0 and 3 exceeded 5%
+and within each table its ordered by % exceeded
+
+\newpage
+
+# 5. Instantaneous Drift Visualization
 
 ```{r}
 ggplot(
@@ -1644,7 +2614,7 @@ ggplot(
 
 \newpage
 
-## 4.1 Percentile Distribution
+## 5.1 Percentile Distribution
 
   Following Zach's lead, I applied the Instantaneous Calibration Drift visualization on the 2024 and 2026 data. In the 2024 figure, anchor calibration drift is concentrated towards 0% and mainly seems to decrease in density between 2.5% to 7.5% deviation. The remaining fraying seems to happen between 7.5% and 20% deviation primarily, and a few outlier anchors extend above 20%, 30%, and 40%. 
   
@@ -1656,277 +2626,6 @@ see if the same anchors come up for the 90-999 range
 
 \newpage
 
-# 5. Maximum Drift Threshold
-
-```{r}
-thresholds <- c(
-  0.01,
-  0.02,
-  0.05,
-  0.10,
-  0.20
-)
-
-thresholds.pct <- c(
-  "1%",
-  "2%",
-  "5%",
-  "10%",
-  "20%"
-)
-```
-
-```{r}
-drift.proportion_2024 <- (
-  crossing(
-    cooked_2024,
-    threshold = thresholds
-  )
-  |> group_by(
-    threshold,
-    days
-  )
-  |> summarise(
-    drifted.above = sum(
-      max.drift > threshold
-    ),
-    .groups = "drop"
-  )
-  |> mutate(
-    threshold = ordered(
-      threshold,
-      levels = thresholds,
-      labels = thresholds.pct
-    )
-  )
-)
-```
-
-```{r}
-ggplot(
-  drift.proportion_2024,
-  aes(
-    x = days,
-    y = drifted.above,
-    colour = threshold,
-    group = threshold
-  )
-) +
-  geom_step(linewidth = 1) +
-  scale_x_continuous(
-    "Calendar days since first calibration",
-    limits = c(
-      0,
-      max(cooked_2024$days)
-    ),
-    breaks = seq(
-      0,
-      max(cooked_2024$days),
-      by = 7
-    )
-  ) +
-  scale_y_continuous(
-    "# anchors drifted past threshold",
-    limits = c(
-      0,
-      n_distinct(cooked_2024$id)
-    )
-  ) +
-  scale_colour_manual(
-    "Threshold",
-    values = c(
-      "1%" = "#0868ac",
-      "2%" = "#43a2ca",
-      "5%" = "#7bccc4",
-      "10%" = "#8c96c6",
-      "20%" = "#8856a7"
-    )
-  ) +
-  labs(
-    title = "2024: Anchors Ever Exceeding Drift Threshold"
-  ) +
-  theme_minimal()
-```
-```{r}
-ggplot(
-  drift.proportion_2024,
-  aes(
-    x = days,
-    y = drifted.above,
-    colour = threshold,
-    group = threshold
-  )
-) +
-  geom_step(linewidth = 1) +
-  scale_x_continuous(
-    "Calendar days since first calibration",
-    limits = c(
-      0,
-      max(cooked_2024$days)
-    ),
-    breaks = seq(
-      0,
-      max(cooked_2024$days),
-      by = 7
-    )
-  ) +
-  scale_y_continuous(
-    "# anchors drifted past threshold",
-    limits = c(
-      0,
-      50
-    )
-  ) +
-  scale_colour_manual(
-    "Threshold",
-    values = c(
-      # "1%" = "#0868ac",
-      # "2%" = "#43a2ca",
-      "5%" = "#7bccc4",
-      "10%" = "#8c96c6",
-      "20%" = "#8856a7"
-    )
-  ) +
-  labs(
-    title = "2024: Anchors Ever Exceeding Drift Threshold"
-  ) +
-  theme_minimal()
-```
-
-\newpage
-
-```{r}
-drift.proportion_2026 <- (
-  crossing(
-    cooked_2026,
-    threshold = thresholds
-  )
-  |> group_by(
-    threshold,
-    days
-  )
-  |> summarise(
-    drifted.above = sum(
-      max.drift > threshold
-    ),
-    .groups = "drop"
-  )
-  |> mutate(
-    threshold = ordered(
-      threshold,
-      levels = thresholds,
-      labels = thresholds.pct
-    )
-  )
-)
-```
-
-```{r}
-ggplot(
-  drift.proportion_2026,
-  aes(
-    x = days,
-    y = drifted.above,
-    colour = threshold,
-    group = threshold
-  )
-) +
-  geom_step(linewidth = 1) +
-  scale_x_continuous(
-    "Calendar days since first calibration",
-    limits = c(
-      0,
-      max(cooked_2026$days)
-    ),
-    breaks = seq(
-      0,
-      max(cooked_2026$days),
-      by = 7
-    )
-  ) +
-  scale_y_continuous(
-    "# anchors drifted past threshold",
-    limits = c(
-      0,
-      n_distinct(cooked_2026$id)
-    )
-  ) +
-  scale_colour_manual(
-    "Threshold",
-    values = c(
-      "1%" = "#0868ac",
-      "2%" = "#43a2ca",
-      "5%" = "#7bccc4",
-      "10%" = "#8c96c6",
-      "20%" = "#8856a7"
-    )
-  ) +
-  labs(
-    title = "2026: Anchors Ever Exceeding Drift Threshold"
-  ) +
-  theme_minimal()
-```
-```{r}
-ggplot(
-  drift.proportion_2026,
-  aes(
-    x = days,
-    y = drifted.above,
-    colour = threshold,
-    group = threshold
-  )
-) +
-  geom_step(linewidth = 1) +
-  scale_x_continuous(
-    "Calendar days since first calibration",
-    limits = c(
-      0,
-      max(cooked_2026$days)
-    ),
-    breaks = seq(
-      0,
-      max(cooked_2026$days),
-      by = 7
-    )
-  ) +
-  scale_y_continuous(
-    "# anchors drifted past threshold",
-    limits = c(
-      0,
-      50
-    )
-  ) +
-  scale_colour_manual(
-    "Threshold",
-    values = c(
-      # "1%" = "#0868ac",
-      "2%" = "#43a2ca",
-      "5%" = "#7bccc4",
-      "10%" = "#8c96c6",
-      "20%" = "#8856a7"
-    )
-  ) +
-  labs(
-    title = "2026: Anchors Ever Exceeding Drift Threshold"
-  ) +
-  theme_minimal()
-```
-
-\newpage
-
-  The Maximum Drift Threshold uses percentage thresholds to illustrate the rate at which the anchors exceed 1%, 2% 5%, 10%, and 20% drift. By day 7, nearly 400 of 659 anchors in the 2024 data have exceeded 1% drift, and around 200 of 659 anchors exceed 2% by day 9. In order to improve interpretability, I have adjusted the y axis for examining the 10% and 20% specific thresholds trends. In this figure, we see that about 20  of 659 anchors exceeded 10% drift, and about 5 of 549 exceeded 20% by the end of the recorded period. This visualization is especially convenient for observing the rate at which the anchors exceed each threshold.
-  
-  For the 2026 data, we use two figures to visualize our threshold details carefully once more. The drift trends for the 2026 data appear to be more conservative than the 2024 data, which is due to the comparatively wider date range and therefore less reliable calibration retrieval (e.g. 9 444 of 899 anchors remain after removing anchors with incomplete series). Nonetheless, the 2026 data demonstrates this shift that we have been noticing around day 35 persists, this time quantifiable as around 10 new anchors reaching 2%, and 5 reaching 5% drift thresholds. 
-  
-  It is especially encouraging to observe that in the 2024 data, the number exceeding the 20% threshold does not exceed 5 anchors, and in 2026, only 1 anchor exceeds 20% after day 77.
-
-
-
-At any point, make table for percent drift table for IDs, top will be the highest drift, then the lower drifts, and then lower like ID 8 exceeded 20%
-6 and 8 exceeded 10%
-6 ad 9 and 0 and 3 exceeded 5%
-and within each table its ordered by % exceeded
-\newpage
 
 # 6. Instantaneous Drift Threshold
 
