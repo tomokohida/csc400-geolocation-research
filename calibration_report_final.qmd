@@ -19,14 +19,11 @@ variable, stationary, and nonstationary behavior of calibration series.
 The overall workflow is:
 
 1. Setup: Load and clean the calibration data
-2. Exploratory Data Analysis: Extract statistical features and compare similarity using K-means, correlation, and greedy selection
-3. Stationarity Testing: Identify stationarity trends and visualize volatile series across geographic region
-4. Change Point Analysis: Identify change points on nonstationary series
-5. Geographic Representation: Effect of Methodology on Calibration  Sample
-6. White Noise and Stationary Classification using Ljung-Box and Augumented Dickey-Fuller Tests
-7. Applying Moving Average Smoothing for "Ground Truth"
-8. Interpretation: Determining a Calibration Threshold
-9. Next Steps
+2. Stationarity Testing
+3. White Noise and Stationary Classification using Ljung-Box and Augmented Dickey-Fuller Tests
+4. Applying Moving Average Smoothing for "Ground Truth"
+5. Interpretation: Determining a Calibration Threshold
+6. Next Steps
 
 \newpage
 
@@ -2015,11 +2012,11 @@ residual_stats <- ma2_residual_df %>%
   )
 ```
 
-## 5.2 Global Residual Statistics
+<!-- ## 5.2 Global Residual Statistics -->
 
-A population-level version of the residual statistics is also calculated. This provides an overall description of calibration variability rather than one statistic per ID.
+<!-- A population-level version of the residual statistics is also calculated. This provides an overall description of calibration variability rather than one statistic per ID. -->
 
-```{r}
+```{r, include = FALSE, echo = FALSE, warning = FALSE, message=FALSE}
 ma2_residual_df <- ma2_df %>%
   mutate(
     residual = value - ma2
