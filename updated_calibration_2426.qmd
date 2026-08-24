@@ -104,7 +104,7 @@ retained_2024 <- anchor_counts_2024 %>%
 numleft24 <- nrow(retained_2024)
 ```
 
-# Overview
+# Introduction
 
 This report compares longitudinal calibration behavior between the 2024 and 2026 calibration datasets.
 
@@ -112,12 +112,48 @@ The analysis reproduces the drift analysis originally applied to the 2024 calibr
 
 Two measures of drift are examined:
 
-1.  **Instantaneous drift:** the absolute proportional difference between an anchor's current calibration and its calibration on Day 0.
-2.  **Maximum drift:** the largest instantaneous drift observed up to each point in time.
+1. **Instantaneous drift:** the absolute proportional difference between an anchor's current calibration and its calibration on Day 0.
+2. **Maximum drift:** the largest instantaneous drift observed up to each point in time.
 
 The analysis also examines the number of anchors that exceed 1%, 2%, 5%, 10%, and 20% deviation thresholds.
 
 For the 2026 data, calendar dates are preserved throughout the analysis. Thus, the `days` variable represents actual elapsed calendar days rather than the number of calibration files retained after missing days were removed.
+
+\newpage
+
+# Overview
+
+The report is organized as follows:
+
+1. Load Data
+2. Calculating Drift
+3. Maximum Drift
+   1. 90-99.9th Percentile Anchor Summary
+   2. Geographic Context of IDs Associated with repeated ASNs in the 90-99.9 Range
+   3. Visualizing Repeated ASN in 90-99.9th Percentile Range
+   4. Flaw with Maximum Calibration Drift Visualization: Repeated ASN Behavior and Day 0 as Ground Truth
+   5. Geographic Context of Single Anchor Associated ASNs in the 90-99.9 Range
+   6. Filtered Maximum Drift (Day 0 Adjustment)
+   7. Discussion on Adjusted Maximum Drift Visualization
+4. Maximum Drift Threshold
+   1. Observations/Discussion
+   2. Anchor IDs that Exceeded 20%, 10%, and 5%
+5. Instantaneous Drift
+   1. 90-99.9th Percentile Anchor Summary
+   2. Geographic Context of IDs Associated with repeated ASNs in the 90-99.9 Range
+   3. Visualizing Repeated ASN in 90-99.9th Percentile Range
+   4. Flaw with Maximum Calibration Drift Visualization: Repeated ASN Behavior and Day 0 as Ground Truth
+   5. Geographic Context of Single Anchor Associated ASNs in the 90-99.9 Range
+   6. Filtered Instantaneous Drift (Day 0 Adjustment: IDs from Instantaneous Drift 90-99.9th percentile)
+   7. Discussion on Adjusted Instantaneous Drift Visualization
+6. Instantaneous Drift Threshold
+   1. Observations/Discussion
+   2. Anchor IDs that Exceeded 20%, 10%, and 5%
+7. Direct 2024 vs. 2026 Comparison
+   1. Maximum Calibration Drift
+   2. Instantaneous Calibration Drift
+   3. Discussion
+8. Notes for Interpretation/Process
 
 \newpage
 
@@ -190,9 +226,9 @@ retained_24_calibration <- retained_24_calibration[, c(2, 1, 3:ncol(retained_24_
 ```
 
 ```{r}
-retained_24_calibration <- retained_24_calibration %>% 
+retained_24_calibration <- retained_24_calibration %>%
   pivot_wider(
-    names_from = "date", 
+    names_from = "date",
     values_from = "calibration"
   )
 ```
@@ -207,7 +243,7 @@ complete_2024 <- retained_24_calibration[
 ```
 
 ```{r}
-complete_2024 <- complete_2024 %>% 
+complete_2024 <- complete_2024 %>%
   pivot_longer(
     cols = -id,
     names_to = "date",
@@ -219,10 +255,10 @@ complete_2024 <- complete_2024 %>% arrange(date)
 
 ```{r}
 # treat first calibration date as Day 0
-complete_2024 <- complete_2024 %>% 
+complete_2024 <- complete_2024 %>%
   mutate(
-    date = ymd(date), 
-    days = as.integer(date - min(date)) 
+    date = ymd(date),
+    days = as.integer(date - min(date))
   )
 ```
 
@@ -239,7 +275,7 @@ complete_2024 <- complete_2024 %>%
 The 2026 data requires us to calculate calibration value via given slope and intercept values.
 
 The calibration value is calculated as:
-$$y = 100m + b$$ 
+$$y = 100m + b$$
 where (m) is the slope and (b) is the intercept.
 
 ```{r}
@@ -503,7 +539,7 @@ df_list_2026 <- lapply(
     ]
   }
 )
-# 
+#
 # length(common_vals_2026)
 new_df <- data.frame(
   id = unlist(common_vals_2026)
@@ -701,14 +737,14 @@ ggplot(
     group = id
   )
 ) +
-  
+
   # Individual anchor trajectories
   geom_step(
     alpha = 0.06,
     linewidth = 0.4,
     color = "black"
   ) +
-  
+
   # 25th percentile
   stat_summary(
     aes(
@@ -719,7 +755,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # Mean
   stat_summary(
     aes(
@@ -730,7 +766,7 @@ ggplot(
     geom = "line",
     linewidth = 0.5
   ) +
-  
+
   # 75th percentile
   stat_summary(
     aes(
@@ -741,7 +777,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # 90th percentile
   stat_summary(
     aes(
@@ -752,7 +788,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # 95th percentile
   stat_summary(
     aes(
@@ -763,7 +799,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # 99th percentile
   stat_summary(
     aes(
@@ -774,7 +810,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # 99.9th percentile
   stat_summary(
     aes(
@@ -785,7 +821,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # Colors and legend
   scale_color_manual(
     name = "Statistic",
@@ -808,21 +844,21 @@ ggplot(
       "25th percentile"   = "green"
     )
   ) +
-  
+
   labs(
     title = "2024 Maximum Calibration Drift",
     x = "Days since first calibration",
     y = "Maximum deviation from Day 0"
   ) +
-  
+
   scale_y_continuous(
     labels = scales::percent_format(
       accuracy = 0.01
     )
   ) +
-  
+
   theme_minimal() +
-  
+
   theme(
     legend.position = "right"
   )
@@ -837,14 +873,14 @@ ggplot(
     group = id
   )
 ) +
-  
+
   # Individual anchor trajectories
   geom_step(
     alpha = 0.06,
     linewidth = 0.4,
     color = "black"
   ) +
-  
+
   # 25th percentile
   stat_summary(
     aes(
@@ -855,7 +891,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # Mean
   stat_summary(
     aes(
@@ -866,7 +902,7 @@ ggplot(
     geom = "line",
     linewidth = 0.5
   ) +
-  
+
   # 75th percentile
   stat_summary(
     aes(
@@ -877,7 +913,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # 90th percentile
   stat_summary(
     aes(
@@ -888,7 +924,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # 95th percentile
   stat_summary(
     aes(
@@ -899,7 +935,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # 99th percentile
   stat_summary(
     aes(
@@ -910,7 +946,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # 99.9th percentile
   stat_summary(
     aes(
@@ -921,7 +957,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # Colors and legend
   scale_color_manual(
     name = "Statistic",
@@ -944,21 +980,21 @@ ggplot(
       "25th percentile"   = "green"
     )
   ) +
-  
+
   labs(
     title = "2026 Maximum Calibration Drift",
     x = "Days since first calibration",
     y = "Maximum deviation from Day 0"
   ) +
-  
+
   scale_y_continuous(
     labels = scales::percent_format(
       accuracy = 0.01
     )
   ) +
-  
+
   theme_minimal() +
-  
+
   theme(
     legend.position = "right"
   )
@@ -1068,7 +1104,7 @@ persistent_90_999_2024 <- persistent_90_999_2024 %>%
 
 persistent_90_999_2026 <- persistent_90_999_2026 %>%
   mutate(id = as.character(id))
-# 
+#
 # kable(persistent_90_999_2024)
 # kable(persistent_90_999_2026)
 ```
@@ -1079,7 +1115,7 @@ persistent_90_999_both <- persistent_90_999_2024 %>%
     persistent_90_999_2026,
     by = "id"
   )
-# 
+#
 # kable(persistent_90_999_both)
 # nrow(persistent_90_999_both)
 ```
@@ -1105,7 +1141,7 @@ cleaned_persistent_90_999_both <- persistent_90_999_both %>%
 #     cleaned_persistent_90_999_both,
 #     by = "id"
 #   )
-# 
+#
 # kable(removed_persistent_90_999_both)
 ```
 
@@ -1145,7 +1181,7 @@ cleaned_persistent_90_999_both_geo <- cleaned_persistent_90_999_both %>%
 asn_summary <- cleaned_persistent_90_999_both_geo %>%
   filter(!is.na(asn)) %>%
   count(asn, name = "anchors") %>%
-# 
+#
 #   mutate(
 #     percent_of_anchors = 100 * anchors / sum(anchors)
 #   ) %>%
@@ -1181,11 +1217,11 @@ AS197540 belongs to netcup GmbH, registered in Germany. Germany dominantes its I
 #   #   percent_anchors = 100 * anchors / sum(anchors)
 #   # ) %>%
 #   arrange(desc(anchors), continent)
-# 
+#
 # # kable(continent_summary)
 # continent_repeated <- continent_summary %>%
 #   filter(anchors > 1)
-# 
+#
 # kable(continent_repeated, caption = "Continent Frequency")
 ```
 
@@ -1218,12 +1254,12 @@ This table lists Germany, the United States, Singapore, Austria, France, Italy, 
 #   #   percent_anchors = 100 * anchors / sum(anchors)
 #   # ) %>%
 #   arrange(desc(anchors), city)
-# 
+#
 # # kable(city_summary)
-# 
+#
 # repeated_cities <- city_summary %>%
 #   filter(anchors > 1)
-# 
+#
 # kable(repeated_cities, caption = "City Frequency")
 ```
 
@@ -1238,7 +1274,7 @@ This table lists Germany, the United States, Singapore, Austria, France, Italy, 
 #       location = as.character(asn)
 #     ) %>%
 #     select(geographic_level, location, anchor_count),
-# 
+#
 #   cleaned_persistent_90_999_both_geo %>%
 #     filter(!is.na(city)) %>%
 #     count(city, name = "anchor_count") %>%
@@ -1247,7 +1283,7 @@ This table lists Germany, the United States, Singapore, Austria, France, Italy, 
 #       location = as.character(city)
 #     ) %>%
 #     select(geographic_level, location, anchor_count),
-# 
+#
 #   cleaned_persistent_90_999_both_geo %>%
 #     filter(!is.na(country)) %>%
 #     count(country, name = "anchor_count") %>%
@@ -1256,7 +1292,7 @@ This table lists Germany, the United States, Singapore, Austria, France, Italy, 
 #       location = as.character(country)
 #     ) %>%
 #     select(geographic_level, location, anchor_count),
-# 
+#
 #   cleaned_persistent_90_999_both_geo %>%
 #     filter(!is.na(continent)) %>%
 #     count(continent, name = "anchor_count") %>%
@@ -1271,13 +1307,13 @@ This table lists Germany, the United States, Singapore, Austria, France, Italy, 
 #     desc(anchor_count),
 #     location
 #   )
-# 
+#
 # kable(geographic_summary)
 ```
 
 ```{r}
 # # ASN + country +city
-# 
+#
 # geo_cluster_summary <- cleaned_persistent_90_999_both_geo %>%
 #   filter(
 #     !is.na(asn) |
@@ -1292,12 +1328,12 @@ This table lists Germany, the United States, Singapore, Austria, France, Italy, 
 #     name = "anchor_count"
 #   ) %>%
 #   arrange(desc(anchor_count))
-# 
+#
 # kable(geo_cluster_summary)
 ```
 
 ```{r}
-# 
+#
 # africa_excluded <- removed_persistent_90_999_both %>%
 #   mutate(
 #     id = as.character(id)
@@ -1311,7 +1347,7 @@ This table lists Germany, the United States, Singapore, Austria, France, Italy, 
 #   filter(
 #     continent == "Africa"
 #   )
-# 
+#
 # nrow(africa_excluded)
 # kable(africa_excluded)
 ```
@@ -1327,7 +1363,7 @@ This table lists Germany, the United States, Singapore, Austria, France, Italy, 
 #       select(pid, continent, country, city, asn),
 #     by = c("id" = "pid")
 #   )
-# 
+#
 # nrow(excluded)
 # kable(excluded)
 ```
@@ -1342,14 +1378,14 @@ This table lists Germany, the United States, Singapore, Austria, France, Italy, 
 cooked_2024_specific3 <- left_join(cleaned_persistent_90_999_both_geo, cooked_2024) %>%
   select(asn, id, date, calibration, days, drift, max.drift)
 
-cooked_2024_specific31 <- left_join(asn_repeated, cooked_2024_specific3) %>% 
+cooked_2024_specific31 <- left_join(asn_repeated, cooked_2024_specific3) %>%
   select(asn, id, date, calibration, days, drift, max.drift) %>%
   filter(asn == 14061)
 
 cooked_2026_specific3 <- left_join(cleaned_persistent_90_999_both_geo, cooked_2026) %>%
   select(asn, id, date, calibration, days, drift, max.drift)
 
-cooked_2026_specific31 <- left_join(asn_repeated, cooked_2026_specific3) %>% 
+cooked_2026_specific31 <- left_join(asn_repeated, cooked_2026_specific3) %>%
   select(asn, id, date, calibration, days, drift, max.drift) %>%
   filter(asn == 14061)
 ```
@@ -1363,28 +1399,28 @@ ggplot(
     group = id
   )
 ) +
-  
+
   # Individual anchor trajectories
   geom_step(
     alpha = 0.5,
     linewidth = 0.4,
     color = "black"
   ) +
-  
+
   labs(
     title = "2024 Maximum Calibration Drift, AS14061 Anchors",
     x = "Days since first calibration",
     y = "Maximum deviation from Day 0"
   ) +
-  
+
   scale_y_continuous(
     labels = scales::percent_format(
       accuracy = 0.01
     )
   ) +
-  
+
   theme_minimal() +
-  
+
   theme(
     legend.position = "right"
   )
@@ -1399,7 +1435,7 @@ ggplot(
     group = id
   )
 ) +
-  
+
   # Individual anchor trajectories
   geom_step(
     alpha = 0.5,
@@ -1411,15 +1447,15 @@ ggplot(
     x = "Days since first calibration",
     y = "Maximum deviation from Day 0"
   ) +
-  
+
   scale_y_continuous(
     labels = scales::percent_format(
       accuracy = 0.01
     )
   ) +
-  
+
   theme_minimal() +
-  
+
   theme(
     legend.position = "right"
   )
@@ -1431,14 +1467,14 @@ ggplot(
 cooked_2024_specific3 <- left_join(cleaned_persistent_90_999_both_geo, cooked_2024) %>%
   select(asn, id, date, calibration, days, drift, max.drift)
 
-cooked_2024_specific31 <- left_join(asn_repeated, cooked_2024_specific3) %>% 
+cooked_2024_specific31 <- left_join(asn_repeated, cooked_2024_specific3) %>%
   select(asn, id, date, calibration, days, drift, max.drift) %>%
   filter(asn == 16276)
 
 cooked_2026_specific3 <- left_join(cleaned_persistent_90_999_both_geo, cooked_2026) %>%
   select(asn, id, date, calibration, days, drift, max.drift)
 
-cooked_2026_specific31 <- left_join(asn_repeated, cooked_2026_specific3) %>% 
+cooked_2026_specific31 <- left_join(asn_repeated, cooked_2026_specific3) %>%
   select(asn, id, date, calibration, days, drift, max.drift) %>%
   filter(asn == 16276)
 ```
@@ -1452,28 +1488,28 @@ ggplot(
     group = id
   )
 ) +
-  
+
   # Individual anchor trajectories
   geom_step(
     alpha = 0.5,
     linewidth = 0.4,
     color = "black"
   ) +
-  
+
   labs(
     title = "2024 Maximum Calibration Drift, AS16276 Anchors",
     x = "Days since first calibration",
     y = "Maximum deviation from Day 0"
   ) +
-  
+
   scale_y_continuous(
     labels = scales::percent_format(
       accuracy = 0.01
     )
   ) +
-  
+
   theme_minimal() +
-  
+
   theme(
     legend.position = "right"
   )
@@ -1488,7 +1524,7 @@ ggplot(
     group = id
   )
 ) +
-  
+
   # Individual anchor trajectories
   geom_step(
     alpha = 0.5,
@@ -1500,15 +1536,15 @@ ggplot(
     x = "Days since first calibration",
     y = "Maximum deviation from Day 0"
   ) +
-  
+
   scale_y_continuous(
     labels = scales::percent_format(
       accuracy = 0.01
     )
   ) +
-  
+
   theme_minimal() +
-  
+
   theme(
     legend.position = "right"
   )
@@ -1520,14 +1556,14 @@ ggplot(
 cooked_2024_specific3 <- left_join(cleaned_persistent_90_999_both_geo, cooked_2024) %>%
   select(asn, id, date, calibration, days, drift, max.drift)
 
-cooked_2024_specific31 <- left_join(asn_repeated, cooked_2024_specific3) %>% 
+cooked_2024_specific31 <- left_join(asn_repeated, cooked_2024_specific3) %>%
   select(asn, id, date, calibration, days, drift, max.drift) %>%
   filter(asn == 3491)
 
 cooked_2026_specific3 <- left_join(cleaned_persistent_90_999_both_geo, cooked_2026) %>%
   select(asn, id, date, calibration, days, drift, max.drift)
 
-cooked_2026_specific31 <- left_join(asn_repeated, cooked_2026_specific3) %>% 
+cooked_2026_specific31 <- left_join(asn_repeated, cooked_2026_specific3) %>%
   select(asn, id, date, calibration, days, drift, max.drift) %>%
   filter(asn == 3491)
 ```
@@ -1541,28 +1577,28 @@ ggplot(
     group = id
   )
 ) +
-  
+
   # Individual anchor trajectories
   geom_step(
     alpha = 0.5,
     linewidth = 0.4,
     color = "black"
   ) +
-  
+
   labs(
     title = "2024 Maximum Calibration Drift, AS3491 Anchors",
     x = "Days since first calibration",
     y = "Maximum deviation from Day 0"
   ) +
-  
+
   scale_y_continuous(
     labels = scales::percent_format(
       accuracy = 0.01
     )
   ) +
-  
+
   theme_minimal() +
-  
+
   theme(
     legend.position = "right"
   )
@@ -1577,7 +1613,7 @@ ggplot(
     group = id
   )
 ) +
-  
+
   # Individual anchor trajectories
   geom_step(
     alpha = 0.5,
@@ -1589,15 +1625,15 @@ ggplot(
     x = "Days since first calibration",
     y = "Maximum deviation from Day 0"
   ) +
-  
+
   scale_y_continuous(
     labels = scales::percent_format(
       accuracy = 0.01
     )
   ) +
-  
+
   theme_minimal() +
-  
+
   theme(
     legend.position = "right"
   )
@@ -1609,14 +1645,14 @@ ggplot(
 cooked_2024_specific3 <- left_join(cleaned_persistent_90_999_both_geo, cooked_2024) %>%
   select(asn, id, date, calibration, days, drift, max.drift)
 
-cooked_2024_specific31 <- left_join(asn_repeated, cooked_2024_specific3) %>% 
+cooked_2024_specific31 <- left_join(asn_repeated, cooked_2024_specific3) %>%
   select(asn, id, date, calibration, days, drift, max.drift) %>%
   filter(asn == 57695)
 
 cooked_2026_specific3 <- left_join(cleaned_persistent_90_999_both_geo, cooked_2026) %>%
   select(asn, id, date, calibration, days, drift, max.drift)
 
-cooked_2026_specific31 <- left_join(asn_repeated, cooked_2026_specific3) %>% 
+cooked_2026_specific31 <- left_join(asn_repeated, cooked_2026_specific3) %>%
   select(asn, id, date, calibration, days, drift, max.drift) %>%
   filter(asn == 57695)
 ```
@@ -1630,28 +1666,28 @@ ggplot(
     group = id
   )
 ) +
-  
+
   # Individual anchor trajectories
   geom_step(
     alpha = 0.5,
     linewidth = 0.4,
     color = "black"
   ) +
-  
+
   labs(
     title = "2024 Maximum Calibration Drift, AS57695 Anchors",
     x = "Days since first calibration",
     y = "Maximum deviation from Day 0"
   ) +
-  
+
   scale_y_continuous(
     labels = scales::percent_format(
       accuracy = 0.01
     )
   ) +
-  
+
   theme_minimal() +
-  
+
   theme(
     legend.position = "right"
   )
@@ -1666,28 +1702,28 @@ ggplot(
     group = id
   )
 ) +
-  
+
   # Individual anchor trajectories
   geom_step(
     alpha = 0.5,
     linewidth = 0.4,
     color = "black"
   ) +
-  
+
   labs(
     title = "2026 Maximum Calibration Drift, AS57695 Anchors",
     x = "Days since first calibration",
     y = "Maximum deviation from Day 0"
   ) +
-  
+
   scale_y_continuous(
     labels = scales::percent_format(
       accuracy = 0.01
     )
   ) +
-  
+
   theme_minimal() +
-  
+
   theme(
     legend.position = "right"
   )
@@ -1699,14 +1735,14 @@ ggplot(
 cooked_2024_specific3 <- left_join(cleaned_persistent_90_999_both_geo, cooked_2024) %>%
   select(asn, id, date, calibration, days, drift, max.drift)
 
-cooked_2024_specific31 <- left_join(asn_repeated, cooked_2024_specific3) %>% 
+cooked_2024_specific31 <- left_join(asn_repeated, cooked_2024_specific3) %>%
   select(asn, id, date, calibration, days, drift, max.drift) %>%
   filter(asn == 36236)
 
 cooked_2026_specific3 <- left_join(cleaned_persistent_90_999_both_geo, cooked_2026) %>%
   select(asn, id, date, calibration, days, drift, max.drift)
 
-cooked_2026_specific31 <- left_join(asn_repeated, cooked_2026_specific3) %>% 
+cooked_2026_specific31 <- left_join(asn_repeated, cooked_2026_specific3) %>%
   select(asn, id, date, calibration, days, drift, max.drift) %>%
   filter(asn == 36236)
 ```
@@ -1720,28 +1756,28 @@ ggplot(
     group = id
   )
 ) +
-  
+
   # Individual anchor trajectories
   geom_step(
     alpha = 0.5,
     linewidth = 0.4,
     color = "black"
   ) +
-  
+
   labs(
     title = "2024 Maximum Calibration Drift, AS36236 Anchors",
     x = "Days since first calibration",
     y = "Maximum deviation from Day 0"
   ) +
-  
+
   scale_y_continuous(
     labels = scales::percent_format(
       accuracy = 0.01
     )
   ) +
-  
+
   theme_minimal() +
-  
+
   theme(
     legend.position = "right"
   )
@@ -1756,28 +1792,28 @@ ggplot(
     group = id
   )
 ) +
-  
+
   # Individual anchor trajectories
   geom_step(
     alpha = 0.5,
     linewidth = 0.4,
     color = "black"
   ) +
-  
+
   labs(
     title = "2026 Maximum Calibration Drift, AS36236 Anchors",
     x = "Days since first calibration",
     y = "Maximum deviation from Day 0"
   ) +
-  
+
   scale_y_continuous(
     labels = scales::percent_format(
       accuracy = 0.01
     )
   ) +
-  
+
   theme_minimal() +
-  
+
   theme(
     legend.position = "right"
   )
@@ -1789,14 +1825,14 @@ ggplot(
 cooked_2024_specific3 <- left_join(cleaned_persistent_90_999_both_geo, cooked_2024) %>%
   select(asn, id, date, calibration, days, drift, max.drift)
 
-cooked_2024_specific31 <- left_join(asn_repeated, cooked_2024_specific3) %>% 
+cooked_2024_specific31 <- left_join(asn_repeated, cooked_2024_specific3) %>%
   select(asn, id, date, calibration, days, drift, max.drift) %>%
   filter(asn == 197540)
 
 cooked_2026_specific3 <- left_join(cleaned_persistent_90_999_both_geo, cooked_2026) %>%
   select(asn, id, date, calibration, days, drift, max.drift)
 
-cooked_2026_specific31 <- left_join(asn_repeated, cooked_2026_specific3) %>% 
+cooked_2026_specific31 <- left_join(asn_repeated, cooked_2026_specific3) %>%
   select(asn, id, date, calibration, days, drift, max.drift) %>%
   filter(asn == 197540)
 ```
@@ -1810,28 +1846,28 @@ ggplot(
     group = id
   )
 ) +
-  
+
   # Individual anchor trajectories
   geom_step(
     alpha = 0.5,
     linewidth = 0.4,
     color = "black"
   ) +
-  
+
   labs(
     title = "2024 Maximum Calibration Drift, AS197540 Anchors",
     x = "Days since first calibration",
     y = "Maximum deviation from Day 0"
   ) +
-  
+
   scale_y_continuous(
     labels = scales::percent_format(
       accuracy = 0.01
     )
   ) +
-  
+
   theme_minimal() +
-  
+
   theme(
     legend.position = "right"
   )
@@ -1846,28 +1882,28 @@ ggplot(
     group = id
   )
 ) +
-  
+
   # Individual anchor trajectories
   geom_step(
     alpha = 0.5,
     linewidth = 0.4,
     color = "black"
   ) +
-  
+
   labs(
     title = "2026 Maximum Calibration Drift, AS197540 Anchors",
     x = "Days since first calibration",
     y = "Maximum deviation from Day 0"
   ) +
-  
+
   scale_y_continuous(
     labels = scales::percent_format(
       accuracy = 0.01
     )
   ) +
-  
+
   theme_minimal() +
-  
+
   theme(
     legend.position = "right"
   )
@@ -1883,7 +1919,7 @@ Take a look at the individual anchors associated with the ASN Frequency Table 2.
 
 ```{r}
 rangeanchor_summary_asn <- cleaned_persistent_90_999_both_geo %>%
-  rename(in_range_24 = days_in_range.x, 
+  rename(in_range_24 = days_in_range.x,
          in_range_26 = days_in_range.y,
          total_24 = total_days.x,
          total26 = total_days.y) %>%
@@ -1922,7 +1958,7 @@ To pare down the IDs for further analysis, we will take away the likely misplace
 ```{r}
 # get ASN summary for asns that are associated with 1 anchor only, find the ones with the most counts for being in the range, discuss asns and geography, confirm with country frequency table?
 rangeanchor_summary_single_asn <- cleaned_persistent_90_999_both_geo %>%
-  rename(in_range_24 = days_in_range.x, 
+  rename(in_range_24 = days_in_range.x,
          in_range_26 = days_in_range.y,
          total_24 = total_days.x,
          total26 = total_days.y) %>%
@@ -1931,31 +1967,31 @@ rangeanchor_summary_single_asn <- cleaned_persistent_90_999_both_geo %>%
   filter(asn != 14061,
          asn != 16276,
          asn != 3491,
-         asn != 57695, 
-         asn != 36236, 
+         asn != 57695,
+         asn != 36236,
          asn != 197540)
 
-kable(rangeanchor_summary_single_asn, caption = "Anchors Associated with Unique ASNs") %>% kable_styling(position = "center") %>% 
+kable(rangeanchor_summary_single_asn, caption = "Anchors Associated with Unique ASNs") %>% kable_styling(position = "center") %>%
   row_spec(c(2, 5, 18, 19, 22, 30,42, 43, 52, 64, 70, 71, 72, 73), background = "yellow")
 ```
 
 ```{r}
 cooked_2024_specific <- left_join(cleaned_persistent_90_999_both_geo, cooked_2024) %>%
   select(asn, id, date, calibration, days, drift, max.drift) %>%
-  filter(id != 6313, 
-         id != 6328, 
-         id != 6762, 
-         id != 6794, 
-         id != 6874, 
-         id != 7011, 
-         id != 7097, 
+  filter(id != 6313,
+         id != 6328,
+         id != 6762,
+         id != 6794,
+         id != 6874,
+         id != 7011,
+         id != 7097,
          id != 7238,
          id != 7261,
-         id != 7043, 
-         id != 7221, 
-         id != 6962, 
+         id != 7043,
+         id != 7221,
+         id != 6962,
          id != 6443,
-         id != 6639, 
+         id != 6639,
          id != 6323,
          id != 7198,
          id != 7078)
@@ -1965,20 +2001,20 @@ landmarks <- landmarks %>%
 
 cooked_2024_specific21 <- left_join(cooked_2024, landmarks) %>%
   select(asn, id, date, calibration, days, drift, max.drift) %>%
-  filter(id != 6313, 
-         id != 6328, 
-         id != 6762, 
-         id != 6794, 
-         id != 6874, 
-         id != 7011, 
-         id != 7097, 
+  filter(id != 6313,
+         id != 6328,
+         id != 6762,
+         id != 6794,
+         id != 6874,
+         id != 7011,
+         id != 7097,
          id != 7238,
          id != 7261,
-         id != 7043, 
-         id != 7221, 
-         id != 6962, 
+         id != 7043,
+         id != 7221,
+         id != 6962,
          id != 6443,
-         id != 6639, 
+         id != 6639,
          id != 6323,
          id != 7198,
          id != 7078)
@@ -1986,7 +2022,7 @@ cooked_2024_specific21 <- left_join(cooked_2024, landmarks) %>%
 
 \newpage
 
-### 3.5.1 Visualize Anchors with Unique ASNs (after day 0 adjustment + filtering)
+## 3.6 Filtered Maximum Drift (After Day 0 Adjustment)
 
 ```{r}
 ggplot(
@@ -1997,7 +2033,7 @@ ggplot(
     group = id
   )
 ) +
-  
+
   # Individual anchor trajectories
   geom_step(
     alpha = 0.06,
@@ -2009,7 +2045,7 @@ ggplot(
     x = "Calendar days since first calibration",
     y = "Deviation from Day 0"
   )  +
-  
+
   # 25th percentile
   stat_summary(
     aes(
@@ -2020,7 +2056,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # Mean
   stat_summary(
     aes(
@@ -2031,7 +2067,7 @@ ggplot(
     geom = "line",
     linewidth = 0.5
   ) +
-  
+
   # 75th percentile
   stat_summary(
     aes(
@@ -2042,7 +2078,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # 90th percentile
   stat_summary(
     aes(
@@ -2053,7 +2089,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # 95th percentile
   stat_summary(
     aes(
@@ -2064,7 +2100,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # 99th percentile
   stat_summary(
     aes(
@@ -2075,7 +2111,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # 99.9th percentile
   stat_summary(
     aes(
@@ -2086,7 +2122,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # Colors and legend
   scale_color_manual(
     name = "Statistic",
@@ -2123,40 +2159,40 @@ ggplot(
 ```{r}
 cooked_2026_specific2 <- left_join(cleaned_persistent_90_999_both_geo, cooked_2026) %>%
   select(asn, id, date, calibration, days, drift, max.drift) %>%
-  filter(id != 6313, 
-         id != 6328, 
-         id != 6762, 
-         id != 6794, 
-         id != 6874, 
-         id != 7011, 
-         id != 7097, 
+  filter(id != 6313,
+         id != 6328,
+         id != 6762,
+         id != 6794,
+         id != 6874,
+         id != 7011,
+         id != 7097,
          id != 7238,
          id != 7261,
-         id != 7043, 
-         id != 7221, 
-         id != 6962, 
+         id != 7043,
+         id != 7221,
+         id != 6962,
          id != 6443,
-         id != 6639, 
+         id != 6639,
          id != 6323,
          id != 7198,
          id != 7078)
 
 cooked_2026_specific21 <- left_join(cooked_2026, landmarks) %>%
   select(asn, id, date, calibration, days, drift, max.drift) %>%
-  filter(id != 6313, 
-         id != 6328, 
-         id != 6762, 
-         id != 6794, 
-         id != 6874, 
-         id != 7011, 
-         id != 7097, 
+  filter(id != 6313,
+         id != 6328,
+         id != 6762,
+         id != 6794,
+         id != 6874,
+         id != 7011,
+         id != 7097,
          id != 7238,
          id != 7261,
-         id != 7043, 
-         id != 7221, 
-         id != 6962, 
+         id != 7043,
+         id != 7221,
+         id != 6962,
          id != 6443,
-         id != 6639, 
+         id != 6639,
          id != 6323,
          id != 7198,
          id != 7078)
@@ -2171,7 +2207,7 @@ ggplot(
     group = id
   )
 ) +
-  
+
   # Individual anchor trajectories
   geom_step(
     alpha = 0.06,
@@ -2183,7 +2219,7 @@ ggplot(
     x = "Calendar days since first calibration",
     y = "Deviation from Day 0"
   )  +
-  
+
   # 25th percentile
   stat_summary(
     aes(
@@ -2194,7 +2230,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # Mean
   stat_summary(
     aes(
@@ -2205,7 +2241,7 @@ ggplot(
     geom = "line",
     linewidth = 0.5
   ) +
-  
+
   # 75th percentile
   stat_summary(
     aes(
@@ -2216,7 +2252,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # 90th percentile
   stat_summary(
     aes(
@@ -2227,7 +2263,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # 95th percentile
   stat_summary(
     aes(
@@ -2238,7 +2274,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # 99th percentile
   stat_summary(
     aes(
@@ -2249,7 +2285,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # 99.9th percentile
   stat_summary(
     aes(
@@ -2260,7 +2296,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # Colors and legend
   scale_color_manual(
     name = "Statistic",
@@ -2289,7 +2325,7 @@ ggplot(
     )
   ) +
   theme_minimal() +
-  
+
   theme(
     legend.position = "right"
   )
@@ -2298,16 +2334,16 @@ ggplot(
 ```{r}
 # asn_repeated <- asn_summary %>%
 #   filter(anchors == 1)
-# 
+#
 # kable(asn_repeated, caption = "ASN Frequency")
 ```
 
-### 3.5.2 Discussion on the 3.5.1 Adjusted Visualizations
+## 3.7 Discussion on Adjusted Maximum Drift Visualizations
 
 
   Upon identifying which anchors appeared the most in the 90-99.9th percentile range, we found that 17 of 91 anchors spent nearly all days of the recorded period in the range for one year, while only appearing the range once the other year. Furthermore, Anchor 7078 recorded 90-99.9th percentile drift 26 of 29 days in 2024 and 76 of 80 days in 2026. As the maximum calibration drift plot evaluates percentage of drift strictly with respect to the day 0 measurement, if anchors are to be at an outlier calibration value on the first day of the recorded period, a prominent drift would likely be maintained for the rest of the period as the calibration returns to its usual value. This suggests that the initial calibration values of 18 anchors including Anchor 7078 were misrepresented on day 0, and brought back to their average rates when appearing in the 90-99.9th percentile range.
 
-  We control for this flaw by removing the anchors that appear in the range more than 75% of the time in one year, while not appearing very few times in the other, or if the anchor appears in range for more than 75% of the days for both years. Ideally, we are then left with a more accurate representation of the erratic anchors whose calibration values drift significantly from day to day. 
+  We control for this flaw by removing the anchors that appear in the range more than 75% of the time in one year, while not appearing very few times in the other, or if the anchor appears in range for more than 75% of the days for both years. Ideally, we are then left with a more accurate representation of the erratic anchors whose calibration values drift significantly from day to day.
 
   After removing the aforementioned 17 anchors, we plot maximum drift once again in 3.5.1. As the majority of the anchors removed recorded their majority 90-99.9th percentile range days in 2026 and spent 1 to at most 8 days in range in 2024, the adjustment from the original 2026 drift from 0-25% to 0-18% is indeed more prominent than the 2024 plot that maintained its 0-45% drift. Indeed, this is a very granular process, and we benefit from considering other visualizations to better understand anchor behavior.
 
@@ -2894,7 +2930,7 @@ ggplot(
     x = "Calendar days since first calibration",
     y = "Deviation from Day 0"
   )  +
-  
+
   # 25th percentile
   stat_summary(
     aes(
@@ -2905,7 +2941,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # Mean
   stat_summary(
     aes(
@@ -2916,7 +2952,7 @@ ggplot(
     geom = "line",
     linewidth = 0.5
   ) +
-  
+
   # 75th percentile
   stat_summary(
     aes(
@@ -2927,7 +2963,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # 90th percentile
   stat_summary(
     aes(
@@ -2938,7 +2974,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # 95th percentile
   stat_summary(
     aes(
@@ -2949,7 +2985,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # 99th percentile
   stat_summary(
     aes(
@@ -2960,7 +2996,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # 99.9th percentile
   stat_summary(
     aes(
@@ -2971,7 +3007,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # Colors and legend
   scale_color_manual(
     name = "Statistic",
@@ -3000,7 +3036,7 @@ ggplot(
     )
   ) +
   theme_minimal()+
-  
+
   theme(
     legend.position = "right"
   )
@@ -3025,7 +3061,7 @@ ggplot(
     x = "Calendar days since first calibration",
     y = "Deviation from Day 0"
   ) +
-  
+
   # 25th percentile
   stat_summary(
     aes(
@@ -3036,7 +3072,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # Mean
   stat_summary(
     aes(
@@ -3047,7 +3083,7 @@ ggplot(
     geom = "line",
     linewidth = 0.5
   ) +
-  
+
   # 75th percentile
   stat_summary(
     aes(
@@ -3058,7 +3094,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # 90th percentile
   stat_summary(
     aes(
@@ -3069,7 +3105,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # 95th percentile
   stat_summary(
     aes(
@@ -3080,7 +3116,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # 99th percentile
   stat_summary(
     aes(
@@ -3091,7 +3127,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # 99.9th percentile
   stat_summary(
     aes(
@@ -3102,7 +3138,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # Colors and legend
   scale_color_manual(
     name = "Statistic",
@@ -3131,7 +3167,7 @@ ggplot(
     )
   ) +
   theme_minimal()+
-  
+
   theme(
     legend.position = "right"
   )
@@ -3233,7 +3269,7 @@ cleaned_persistent_90_999_instant_both <- persistent_90_999_instant_both %>%
 ```
 
 ```{r}
-cleaned_persistent_90_999_instant_both_geo <- 
+cleaned_persistent_90_999_instant_both_geo <-
   cleaned_persistent_90_999_instant_both %>%
   left_join(
     landmarks
@@ -3263,14 +3299,14 @@ kable(asn_repeated_instant, caption = "ASN Frequency")
 cooked_instant_2024_specific3 <- left_join(cleaned_persistent_90_999_instant_both_geo, cooked_2024) %>%
   select(asn, id, date, calibration, days, drift)
 
-cooked_instant_2024_specific31 <- left_join(asn_repeated_instant, cooked_instant_2024_specific3) %>% 
+cooked_instant_2024_specific31 <- left_join(asn_repeated_instant, cooked_instant_2024_specific3) %>%
   select(asn, id, date, calibration, days, drift) %>%
   filter(asn == 14061)
 
 cooked_instant_2026_specific3 <- left_join(cleaned_persistent_90_999_instant_both_geo, cooked_2026) %>%
   select(asn, id, date, calibration, days, drift)
 
-cooked_instant_2026_specific31 <- left_join(asn_repeated_instant, cooked_instant_2026_specific3) %>% 
+cooked_instant_2026_specific31 <- left_join(asn_repeated_instant, cooked_instant_2026_specific3) %>%
   select(asn, id, date, calibration, days, drift) %>%
   filter(asn == 14061)
 ```
@@ -3284,28 +3320,28 @@ ggplot(
     group = id
   )
 ) +
-  
+
   # Individual anchor trajectories
   geom_step(
     alpha = 0.5,
     linewidth = 0.4,
     color = "black"
   ) +
-  
+
   labs(
     title = "2024 Instantaneous Calibration Drift, AS14061 Anchors",
     x = "Days since first calibration",
     y = "Maximum deviation from Day 0"
   ) +
-  
+
   scale_y_continuous(
     labels = scales::percent_format(
       accuracy = 0.01
     )
   ) +
-  
+
   theme_minimal() +
-  
+
   theme(
     legend.position = "right"
   )
@@ -3320,7 +3356,7 @@ ggplot(
     group = id
   )
 ) +
-  
+
   # Individual anchor trajectories
   geom_step(
     alpha = 0.5,
@@ -3332,15 +3368,15 @@ ggplot(
     x = "Days since first calibration",
     y = "Maximum deviation from Day 0"
   ) +
-  
+
   scale_y_continuous(
     labels = scales::percent_format(
       accuracy = 0.01
     )
   ) +
-  
+
   theme_minimal() +
-  
+
   theme(
     legend.position = "right"
   )
@@ -3352,14 +3388,14 @@ ggplot(
 cooked_instant_2024_specific3 <- left_join(cleaned_persistent_90_999_instant_both_geo, cooked_2024) %>%
   select(asn, id, date, calibration, days, drift)
 
-cooked_instant_2024_specific31 <- left_join(asn_repeated_instant, cooked_instant_2024_specific3) %>% 
+cooked_instant_2024_specific31 <- left_join(asn_repeated_instant, cooked_instant_2024_specific3) %>%
   select(asn, id, date, calibration, days, drift) %>%
   filter(asn == 16276)
 
 cooked_instant_2026_specific3 <- left_join(cleaned_persistent_90_999_instant_both_geo, cooked_2026) %>%
   select(asn, id, date, calibration, days, drift)
 
-cooked_instant_2026_specific31 <- left_join(asn_repeated_instant, cooked_instant_2026_specific3) %>% 
+cooked_instant_2026_specific31 <- left_join(asn_repeated_instant, cooked_instant_2026_specific3) %>%
   select(asn, id, date, calibration, days, drift) %>%
   filter(asn == 16276)
 ```
@@ -3373,28 +3409,28 @@ ggplot(
     group = id
   )
 ) +
-  
+
   # Individual anchor trajectories
   geom_step(
     alpha = 0.5,
     linewidth = 0.4,
     color = "black"
   ) +
-  
+
   labs(
     title = "2024 Instantaneous Calibration Drift, AS16276 Anchors",
     x = "Days since first calibration",
     y = "Maximum deviation from Day 0"
   ) +
-  
+
   scale_y_continuous(
     labels = scales::percent_format(
       accuracy = 0.01
     )
   ) +
-  
+
   theme_minimal() +
-  
+
   theme(
     legend.position = "right"
   )
@@ -3409,7 +3445,7 @@ ggplot(
     group = id
   )
 ) +
-  
+
   # Individual anchor trajectories
   geom_step(
     alpha = 0.5,
@@ -3421,15 +3457,15 @@ ggplot(
     x = "Days since first calibration",
     y = "Maximum deviation from Day 0"
   ) +
-  
+
   scale_y_continuous(
     labels = scales::percent_format(
       accuracy = 0.01
     )
   ) +
-  
+
   theme_minimal() +
-  
+
   theme(
     legend.position = "right"
   )
@@ -3441,14 +3477,14 @@ ggplot(
 cooked_instant_2024_specific3 <- left_join(cleaned_persistent_90_999_instant_both_geo, cooked_2024) %>%
   select(asn, id, date, calibration, days, drift)
 
-cooked_instant_2024_specific31 <- left_join(asn_repeated_instant, cooked_instant_2024_specific3) %>% 
+cooked_instant_2024_specific31 <- left_join(asn_repeated_instant, cooked_instant_2024_specific3) %>%
   select(asn, id, date, calibration, days, drift) %>%
   filter(asn == 3491)
 
 cooked_instant_2026_specific3 <- left_join(cleaned_persistent_90_999_instant_both_geo, cooked_2026) %>%
   select(asn, id, date, calibration, days, drift)
 
-cooked_instant_2026_specific31 <- left_join(asn_repeated_instant, cooked_instant_2026_specific3) %>% 
+cooked_instant_2026_specific31 <- left_join(asn_repeated_instant, cooked_instant_2026_specific3) %>%
   select(asn, id, date, calibration, days, drift) %>%
   filter(asn == 3491)
 ```
@@ -3462,28 +3498,28 @@ ggplot(
     group = id
   )
 ) +
-  
+
   # Individual anchor trajectories
   geom_step(
     alpha = 0.5,
     linewidth = 0.4,
     color = "black"
   ) +
-  
+
   labs(
     title = "2024 Instantaneous Calibration Drift, AS3491 Anchors",
     x = "Days since first calibration",
     y = "Maximum deviation from Day 0"
   ) +
-  
+
   scale_y_continuous(
     labels = scales::percent_format(
       accuracy = 0.01
     )
   ) +
-  
+
   theme_minimal() +
-  
+
   theme(
     legend.position = "right"
   )
@@ -3498,7 +3534,7 @@ ggplot(
     group = id
   )
 ) +
-  
+
   # Individual anchor trajectories
   geom_step(
     alpha = 0.5,
@@ -3510,15 +3546,15 @@ ggplot(
     x = "Days since first calibration",
     y = "Maximum deviation from Day 0"
   ) +
-  
+
   scale_y_continuous(
     labels = scales::percent_format(
       accuracy = 0.01
     )
   ) +
-  
+
   theme_minimal() +
-  
+
   theme(
     legend.position = "right"
   )
@@ -3530,14 +3566,14 @@ ggplot(
 cooked_instant_2024_specific3 <- left_join(cleaned_persistent_90_999_instant_both_geo, cooked_2024) %>%
   select(asn, id, date, calibration, days, drift)
 
-cooked_instant_2024_specific31 <- left_join(asn_repeated_instant, cooked_instant_2024_specific3) %>% 
+cooked_instant_2024_specific31 <- left_join(asn_repeated_instant, cooked_instant_2024_specific3) %>%
   select(asn, id, date, calibration, days, drift) %>%
   filter(asn == 57695)
 
 cooked_instant_2026_specific3 <- left_join(cleaned_persistent_90_999_instant_both_geo, cooked_2026) %>%
   select(asn, id, date, calibration, days, drift)
 
-cooked_instant_2026_specific31 <- left_join(asn_repeated_instant, cooked_instant_2026_specific3) %>% 
+cooked_instant_2026_specific31 <- left_join(asn_repeated_instant, cooked_instant_2026_specific3) %>%
   select(asn, id, date, calibration, days, drift) %>%
   filter(asn == 57695)
 ```
@@ -3551,28 +3587,28 @@ ggplot(
     group = id
   )
 ) +
-  
+
   # Individual anchor trajectories
   geom_step(
     alpha = 0.5,
     linewidth = 0.4,
     color = "black"
   ) +
-  
+
   labs(
     title = "2024 Instantaneous Calibration Drift, AS57695 Anchors",
     x = "Days since first calibration",
     y = "Maximum deviation from Day 0"
   ) +
-  
+
   scale_y_continuous(
     labels = scales::percent_format(
       accuracy = 0.01
     )
   ) +
-  
+
   theme_minimal() +
-  
+
   theme(
     legend.position = "right"
   )
@@ -3587,28 +3623,28 @@ ggplot(
     group = id
   )
 ) +
-  
+
   # Individual anchor trajectories
   geom_step(
     alpha = 0.5,
     linewidth = 0.4,
     color = "black"
   ) +
-  
+
   labs(
     title = "2026 Instantaneous Calibration Drift, AS57695 Anchors",
     x = "Days since first calibration",
     y = "Maximum deviation from Day 0"
   ) +
-  
+
   scale_y_continuous(
     labels = scales::percent_format(
       accuracy = 0.01
     )
   ) +
-  
+
   theme_minimal() +
-  
+
   theme(
     legend.position = "right"
   )
@@ -3620,14 +3656,14 @@ ggplot(
 cooked_instant_2024_specific3 <- left_join(cleaned_persistent_90_999_instant_both_geo, cooked_2024) %>%
   select(asn, id, date, calibration, days, drift)
 
-cooked_instant_2024_specific31 <- left_join(asn_repeated_instant, cooked_instant_2024_specific3) %>% 
+cooked_instant_2024_specific31 <- left_join(asn_repeated_instant, cooked_instant_2024_specific3) %>%
   select(asn, id, date, calibration, days, drift) %>%
   filter(asn == 36236)
 
 cooked_instant_2026_specific3 <- left_join(cleaned_persistent_90_999_instant_both_geo, cooked_2026) %>%
   select(asn, id, date, calibration, days, drift)
 
-cooked_instant_2026_specific31 <- left_join(asn_repeated_instant, cooked_instant_2026_specific3) %>% 
+cooked_instant_2026_specific31 <- left_join(asn_repeated_instant, cooked_instant_2026_specific3) %>%
   select(asn, id, date, calibration, days, drift) %>%
   filter(asn == 36236)
 ```
@@ -3641,28 +3677,28 @@ ggplot(
     group = id
   )
 ) +
-  
+
   # Individual anchor trajectories
   geom_step(
     alpha = 0.5,
     linewidth = 0.4,
     color = "black"
   ) +
-  
+
   labs(
     title = "2024 Instantaneous Calibration Drift, AS36236 Anchors",
     x = "Days since first calibration",
     y = "Maximum deviation from Day 0"
   ) +
-  
+
   scale_y_continuous(
     labels = scales::percent_format(
       accuracy = 0.01
     )
   ) +
-  
+
   theme_minimal() +
-  
+
   theme(
     legend.position = "right"
   )
@@ -3677,28 +3713,28 @@ ggplot(
     group = id
   )
 ) +
-  
+
   # Individual anchor trajectories
   geom_step(
     alpha = 0.5,
     linewidth = 0.4,
     color = "black"
   ) +
-  
+
   labs(
     title = "2026 Instantaneous Calibration Drift, AS36236 Anchors",
     x = "Days since first calibration",
     y = "Maximum deviation from Day 0"
   ) +
-  
+
   scale_y_continuous(
     labels = scales::percent_format(
       accuracy = 0.01
     )
   ) +
-  
+
   theme_minimal() +
-  
+
   theme(
     legend.position = "right"
   )
@@ -3710,14 +3746,14 @@ ggplot(
 cooked_instant_2024_specific3 <- left_join(cleaned_persistent_90_999_instant_both_geo, cooked_2024) %>%
   select(asn, id, date, calibration, days, drift)
 
-cooked_instant_2024_specific31 <- left_join(asn_repeated_instant, cooked_instant_2024_specific3) %>% 
+cooked_instant_2024_specific31 <- left_join(asn_repeated_instant, cooked_instant_2024_specific3) %>%
   select(asn, id, date, calibration, days, drift) %>%
   filter(asn == 199524)
 
 cooked_instant_2026_specific3 <- left_join(cleaned_persistent_90_999_instant_both_geo, cooked_2026) %>%
   select(asn, id, date, calibration, days, drift)
 
-cooked_instant_2026_specific31 <- left_join(asn_repeated_instant, cooked_instant_2026_specific3) %>% 
+cooked_instant_2026_specific31 <- left_join(asn_repeated_instant, cooked_instant_2026_specific3) %>%
   select(asn, id, date, calibration, days, drift) %>%
   filter(asn == 199524)
 ```
@@ -3731,28 +3767,28 @@ ggplot(
     group = id
   )
 ) +
-  
+
   # Individual anchor trajectories
   geom_step(
     alpha = 0.5,
     linewidth = 0.4,
     color = "black"
   ) +
-  
+
   labs(
     title = "2024 Instantaneous Calibration Drift, AS199524 Anchors",
     x = "Days since first calibration",
     y = "Maximum deviation from Day 0"
   ) +
-  
+
   scale_y_continuous(
     labels = scales::percent_format(
       accuracy = 0.01
     )
   ) +
-  
+
   theme_minimal() +
-  
+
   theme(
     legend.position = "right"
   )
@@ -3767,28 +3803,28 @@ ggplot(
     group = id
   )
 ) +
-  
+
   # Individual anchor trajectories
   geom_step(
     alpha = 0.5,
     linewidth = 0.4,
     color = "black"
   ) +
-  
+
   labs(
     title = "2026 Instantaneous Calibration Drift, AS199524 Anchors",
     x = "Days since first calibration",
     y = "Maximum deviation from Day 0"
   ) +
-  
+
   scale_y_continuous(
     labels = scales::percent_format(
       accuracy = 0.01
     )
   ) +
-  
+
   theme_minimal() +
-  
+
   theme(
     legend.position = "right"
   )
@@ -3800,14 +3836,14 @@ ggplot(
 cooked_instant_2024_specific3 <- left_join(cleaned_persistent_90_999_instant_both_geo, cooked_2024) %>%
   select(asn, id, date, calibration, days, drift)
 
-cooked_instant_2024_specific31 <- left_join(asn_repeated_instant, cooked_instant_2024_specific3) %>% 
+cooked_instant_2024_specific31 <- left_join(asn_repeated_instant, cooked_instant_2024_specific3) %>%
   select(asn, id, date, calibration, days, drift) %>%
   filter(asn == 8473)
 
 cooked_instant_2026_specific3 <- left_join(cleaned_persistent_90_999_instant_both_geo, cooked_2026) %>%
   select(asn, id, date, calibration, days, drift)
 
-cooked_instant_2026_specific31 <- left_join(asn_repeated_instant, cooked_instant_2026_specific3) %>% 
+cooked_instant_2026_specific31 <- left_join(asn_repeated_instant, cooked_instant_2026_specific3) %>%
   select(asn, id, date, calibration, days, drift) %>%
   filter(asn == 8473)
 ```
@@ -3821,28 +3857,28 @@ ggplot(
     group = id
   )
 ) +
-  
+
   # Individual anchor trajectories
   geom_step(
     alpha = 0.5,
     linewidth = 0.4,
     color = "black"
   ) +
-  
+
   labs(
     title = "2024 Instantaneous Calibration Drift, AS8473 Anchors",
     x = "Days since first calibration",
     y = "Maximum deviation from Day 0"
   ) +
-  
+
   scale_y_continuous(
     labels = scales::percent_format(
       accuracy = 0.01
     )
   ) +
-  
+
   theme_minimal() +
-  
+
   theme(
     legend.position = "right"
   )
@@ -3857,28 +3893,28 @@ ggplot(
     group = id
   )
 ) +
-  
+
   # Individual anchor trajectories
   geom_step(
     alpha = 0.5,
     linewidth = 0.4,
     color = "black"
   ) +
-  
+
   labs(
     title = "2026 Instantaneous Calibration Drift, AS8473 Anchors",
     x = "Days since first calibration",
     y = "Maximum deviation from Day 0"
   ) +
-  
+
   scale_y_continuous(
     labels = scales::percent_format(
       accuracy = 0.01
     )
   ) +
-  
+
   theme_minimal() +
-  
+
   theme(
     legend.position = "right"
   )
@@ -3890,14 +3926,14 @@ ggplot(
 cooked_instant_2024_specific3 <- left_join(cleaned_persistent_90_999_instant_both_geo, cooked_2024) %>%
   select(asn, id, date, calibration, days, drift)
 
-cooked_instant_2024_specific31 <- left_join(asn_repeated_instant, cooked_instant_2024_specific3) %>% 
+cooked_instant_2024_specific31 <- left_join(asn_repeated_instant, cooked_instant_2024_specific3) %>%
   select(asn, id, date, calibration, days, drift) %>%
   filter(asn == 16347)
 
 cooked_instant_2026_specific3 <- left_join(cleaned_persistent_90_999_instant_both_geo, cooked_2026) %>%
   select(asn, id, date, calibration, days, drift)
 
-cooked_instant_2026_specific31 <- left_join(asn_repeated_instant, cooked_instant_2026_specific3) %>% 
+cooked_instant_2026_specific31 <- left_join(asn_repeated_instant, cooked_instant_2026_specific3) %>%
   select(asn, id, date, calibration, days, drift) %>%
   filter(asn == 16347)
 ```
@@ -3911,28 +3947,28 @@ ggplot(
     group = id
   )
 ) +
-  
+
   # Individual anchor trajectories
   geom_step(
     alpha = 0.5,
     linewidth = 0.4,
     color = "black"
   ) +
-  
+
   labs(
     title = "2024 Instantaneous Calibration Drift, AS16347 Anchors",
     x = "Days since first calibration",
     y = "Maximum deviation from Day 0"
   ) +
-  
+
   scale_y_continuous(
     labels = scales::percent_format(
       accuracy = 0.01
     )
   ) +
-  
+
   theme_minimal() +
-  
+
   theme(
     legend.position = "right"
   )
@@ -3947,28 +3983,28 @@ ggplot(
     group = id
   )
 ) +
-  
+
   # Individual anchor trajectories
   geom_step(
     alpha = 0.5,
     linewidth = 0.4,
     color = "black"
   ) +
-  
+
   labs(
     title = "2026 Instantaneous Calibration Drift, AS16347 Anchors",
     x = "Days since first calibration",
     y = "Maximum deviation from Day 0"
   ) +
-  
+
   scale_y_continuous(
     labels = scales::percent_format(
       accuracy = 0.01
     )
   ) +
-  
+
   theme_minimal() +
-  
+
   theme(
     legend.position = "right"
   )
@@ -3979,14 +4015,14 @@ ggplot(
 cooked_instant_2024_specific3 <- left_join(cleaned_persistent_90_999_instant_both_geo, cooked_2024) %>%
   select(asn, id, date, calibration, days, drift)
 
-cooked_instant_2024_specific31 <- left_join(asn_repeated_instant, cooked_instant_2024_specific3) %>% 
+cooked_instant_2024_specific31 <- left_join(asn_repeated_instant, cooked_instant_2024_specific3) %>%
   select(asn, id, date, calibration, days, drift) %>%
   filter(asn == 20473)
 
 cooked_instant_2026_specific3 <- left_join(cleaned_persistent_90_999_instant_both_geo, cooked_2026) %>%
   select(asn, id, date, calibration, days, drift)
 
-cooked_instant_2026_specific31 <- left_join(asn_repeated_instant, cooked_instant_2026_specific3) %>% 
+cooked_instant_2026_specific31 <- left_join(asn_repeated_instant, cooked_instant_2026_specific3) %>%
   select(asn, id, date, calibration, days, drift) %>%
   filter(asn == 20473)
 ```
@@ -4000,28 +4036,28 @@ ggplot(
     group = id
   )
 ) +
-  
+
   # Individual anchor trajectories
   geom_step(
     alpha = 0.5,
     linewidth = 0.4,
     color = "black"
   ) +
-  
+
   labs(
     title = "2024 Instantaneous Calibration Drift, AS20473 Anchors",
     x = "Days since first calibration",
     y = "Maximum deviation from Day 0"
   ) +
-  
+
   scale_y_continuous(
     labels = scales::percent_format(
       accuracy = 0.01
     )
   ) +
-  
+
   theme_minimal() +
-  
+
   theme(
     legend.position = "right"
   )
@@ -4036,28 +4072,28 @@ ggplot(
     group = id
   )
 ) +
-  
+
   # Individual anchor trajectories
   geom_step(
     alpha = 0.5,
     linewidth = 0.4,
     color = "black"
   ) +
-  
+
   labs(
     title = "2026 Instantaneous Calibration Drift, AS20473 Anchors",
     x = "Days since first calibration",
     y = "Maximum deviation from Day 0"
   ) +
-  
+
   scale_y_continuous(
     labels = scales::percent_format(
       accuracy = 0.01
     )
   ) +
-  
+
   theme_minimal() +
-  
+
   theme(
     legend.position = "right"
   )
@@ -4068,14 +4104,14 @@ ggplot(
 cooked_instant_2024_specific3 <- left_join(cleaned_persistent_90_999_instant_both_geo, cooked_2024) %>%
   select(asn, id, date, calibration, days, drift)
 
-cooked_instant_2024_specific31 <- left_join(asn_repeated_instant, cooked_instant_2024_specific3) %>% 
+cooked_instant_2024_specific31 <- left_join(asn_repeated_instant, cooked_instant_2024_specific3) %>%
   select(asn, id, date, calibration, days, drift) %>%
   filter(asn == 24940)
 
 cooked_instant_2026_specific3 <- left_join(cleaned_persistent_90_999_instant_both_geo, cooked_2026) %>%
   select(asn, id, date, calibration, days, drift)
 
-cooked_instant_2026_specific31 <- left_join(asn_repeated_instant, cooked_instant_2026_specific3) %>% 
+cooked_instant_2026_specific31 <- left_join(asn_repeated_instant, cooked_instant_2026_specific3) %>%
   select(asn, id, date, calibration, days, drift) %>%
   filter(asn == 24940)
 ```
@@ -4089,28 +4125,28 @@ ggplot(
     group = id
   )
 ) +
-  
+
   # Individual anchor trajectories
   geom_step(
     alpha = 0.5,
     linewidth = 0.4,
     color = "black"
   ) +
-  
+
   labs(
     title = "2024 Instantaneous Calibration Drift, AS24940 Anchors",
     x = "Days since first calibration",
     y = "Maximum deviation from Day 0"
   ) +
-  
+
   scale_y_continuous(
     labels = scales::percent_format(
       accuracy = 0.01
     )
   ) +
-  
+
   theme_minimal() +
-  
+
   theme(
     legend.position = "right"
   )
@@ -4125,28 +4161,28 @@ ggplot(
     group = id
   )
 ) +
-  
+
   # Individual anchor trajectories
   geom_step(
     alpha = 0.5,
     linewidth = 0.4,
     color = "black"
   ) +
-  
+
   labs(
     title = "2026 Instantaneous Calibration Drift, AS24940 Anchors",
     x = "Days since first calibration",
     y = "Maximum deviation from Day 0"
   ) +
-  
+
   scale_y_continuous(
     labels = scales::percent_format(
       accuracy = 0.01
     )
   ) +
-  
+
   theme_minimal() +
-  
+
   theme(
     legend.position = "right"
   )
@@ -4158,14 +4194,14 @@ ggplot(
 cooked_instant_2024_specific3 <- left_join(cleaned_persistent_90_999_instant_both_geo, cooked_2024) %>%
   select(asn, id, date, calibration, days, drift)
 
-cooked_instant_2024_specific31 <- left_join(asn_repeated_instant, cooked_instant_2024_specific3) %>% 
+cooked_instant_2024_specific31 <- left_join(asn_repeated_instant, cooked_instant_2024_specific3) %>%
   select(asn, id, date, calibration, days, drift) %>%
   filter(asn == 35574)
 
 cooked_instant_2026_specific3 <- left_join(cleaned_persistent_90_999_instant_both_geo, cooked_2026) %>%
   select(asn, id, date, calibration, days, drift)
 
-cooked_instant_2026_specific31 <- left_join(asn_repeated_instant, cooked_instant_2026_specific3) %>% 
+cooked_instant_2026_specific31 <- left_join(asn_repeated_instant, cooked_instant_2026_specific3) %>%
   select(asn, id, date, calibration, days, drift) %>%
   filter(asn == 35574)
 ```
@@ -4179,28 +4215,28 @@ ggplot(
     group = id
   )
 ) +
-  
+
   # Individual anchor trajectories
   geom_step(
     alpha = 0.5,
     linewidth = 0.4,
     color = "black"
   ) +
-  
+
   labs(
     title = "2024 Instantaneous Calibration Drift, AS35574 Anchors",
     x = "Days since first calibration",
     y = "Maximum deviation from Day 0"
   ) +
-  
+
   scale_y_continuous(
     labels = scales::percent_format(
       accuracy = 0.01
     )
   ) +
-  
+
   theme_minimal() +
-  
+
   theme(
     legend.position = "right"
   )
@@ -4215,28 +4251,28 @@ ggplot(
     group = id
   )
 ) +
-  
+
   # Individual anchor trajectories
   geom_step(
     alpha = 0.5,
     linewidth = 0.4,
     color = "black"
   ) +
-  
+
   labs(
     title = "2026 Instantaneous Calibration Drift, AS35574 Anchors",
     x = "Days since first calibration",
     y = "Maximum deviation from Day 0"
   ) +
-  
+
   scale_y_continuous(
     labels = scales::percent_format(
       accuracy = 0.01
     )
   ) +
-  
+
   theme_minimal() +
-  
+
   theme(
     legend.position = "right"
   )
@@ -4248,14 +4284,14 @@ ggplot(
 cooked_instant_2024_specific3 <- left_join(cleaned_persistent_90_999_instant_both_geo, cooked_2024) %>%
   select(asn, id, date, calibration, days, drift)
 
-cooked_instant_2024_specific31 <- left_join(asn_repeated_instant, cooked_instant_2024_specific3) %>% 
+cooked_instant_2024_specific31 <- left_join(asn_repeated_instant, cooked_instant_2024_specific3) %>%
   select(asn, id, date, calibration, days, drift) %>%
   filter(asn == 39923)
 
 cooked_instant_2026_specific3 <- left_join(cleaned_persistent_90_999_instant_both_geo, cooked_2026) %>%
   select(asn, id, date, calibration, days, drift)
 
-cooked_instant_2026_specific31 <- left_join(asn_repeated_instant, cooked_instant_2026_specific3) %>% 
+cooked_instant_2026_specific31 <- left_join(asn_repeated_instant, cooked_instant_2026_specific3) %>%
   select(asn, id, date, calibration, days, drift) %>%
   filter(asn == 39923)
 ```
@@ -4269,28 +4305,28 @@ ggplot(
     group = id
   )
 ) +
-  
+
   # Individual anchor trajectories
   geom_step(
     alpha = 0.5,
     linewidth = 0.4,
     color = "black"
   ) +
-  
+
   labs(
     title = "2024 Instantaneous Calibration Drift, AS39923 Anchors",
     x = "Days since first calibration",
     y = "Maximum deviation from Day 0"
   ) +
-  
+
   scale_y_continuous(
     labels = scales::percent_format(
       accuracy = 0.01
     )
   ) +
-  
+
   theme_minimal() +
-  
+
   theme(
     legend.position = "right"
   )
@@ -4305,28 +4341,28 @@ ggplot(
     group = id
   )
 ) +
-  
+
   # Individual anchor trajectories
   geom_step(
     alpha = 0.5,
     linewidth = 0.4,
     color = "black"
   ) +
-  
+
   labs(
     title = "2026 Instantaneous Calibration Drift, AS39923 Anchors",
     x = "Days since first calibration",
     y = "Maximum deviation from Day 0"
   ) +
-  
+
   scale_y_continuous(
     labels = scales::percent_format(
       accuracy = 0.01
     )
   ) +
-  
+
   theme_minimal() +
-  
+
   theme(
     legend.position = "right"
   )
@@ -4338,14 +4374,14 @@ ggplot(
 cooked_instant_2024_specific3 <- left_join(cleaned_persistent_90_999_instant_both_geo, cooked_2024) %>%
   select(asn, id, date, calibration, days, drift)
 
-cooked_instant_2024_specific31 <- left_join(asn_repeated_instant, cooked_instant_2024_specific3) %>% 
+cooked_instant_2024_specific31 <- left_join(asn_repeated_instant, cooked_instant_2024_specific3) %>%
   select(asn, id, date, calibration, days, drift) %>%
   filter(asn == 197540)
 
 cooked_instant_2026_specific3 <- left_join(cleaned_persistent_90_999_instant_both_geo, cooked_2026) %>%
   select(asn, id, date, calibration, days, drift)
 
-cooked_instant_2026_specific31 <- left_join(asn_repeated_instant, cooked_instant_2026_specific3) %>% 
+cooked_instant_2026_specific31 <- left_join(asn_repeated_instant, cooked_instant_2026_specific3) %>%
   select(asn, id, date, calibration, days, drift) %>%
   filter(asn == 197540)
 ```
@@ -4359,28 +4395,28 @@ ggplot(
     group = id
   )
 ) +
-  
+
   # Individual anchor trajectories
   geom_step(
     alpha = 0.5,
     linewidth = 0.4,
     color = "black"
   ) +
-  
+
   labs(
     title = "2024 Instantaneous Calibration Drift, AS197540 Anchors",
     x = "Days since first calibration",
     y = "Maximum deviation from Day 0"
   ) +
-  
+
   scale_y_continuous(
     labels = scales::percent_format(
       accuracy = 0.01
     )
   ) +
-  
+
   theme_minimal() +
-  
+
   theme(
     legend.position = "right"
   )
@@ -4395,28 +4431,28 @@ ggplot(
     group = id
   )
 ) +
-  
+
   # Individual anchor trajectories
   geom_step(
     alpha = 0.5,
     linewidth = 0.4,
     color = "black"
   ) +
-  
+
   labs(
     title = "2026 Instantaneous Calibration Drift, AS197540 Anchors",
     x = "Days since first calibration",
     y = "Maximum deviation from Day 0"
   ) +
-  
+
   scale_y_continuous(
     labels = scales::percent_format(
       accuracy = 0.01
     )
   ) +
-  
+
   theme_minimal() +
-  
+
   theme(
     legend.position = "right"
   )
@@ -4428,14 +4464,14 @@ ggplot(
 cooked_instant_2024_specific3 <- left_join(cleaned_persistent_90_999_instant_both_geo, cooked_2024) %>%
   select(asn, id, date, calibration, days, drift)
 
-cooked_instant_2024_specific31 <- left_join(asn_repeated_instant, cooked_instant_2024_specific3) %>% 
+cooked_instant_2024_specific31 <- left_join(asn_repeated_instant, cooked_instant_2024_specific3) %>%
   select(asn, id, date, calibration, days, drift) %>%
   filter(asn == 199610)
 
 cooked_instant_2026_specific3 <- left_join(cleaned_persistent_90_999_instant_both_geo, cooked_2026) %>%
   select(asn, id, date, calibration, days, drift)
 
-cooked_instant_2026_specific31 <- left_join(asn_repeated_instant, cooked_instant_2026_specific3) %>% 
+cooked_instant_2026_specific31 <- left_join(asn_repeated_instant, cooked_instant_2026_specific3) %>%
   select(asn, id, date, calibration, days, drift) %>%
   filter(asn == 199610)
 ```
@@ -4449,28 +4485,28 @@ ggplot(
     group = id
   )
 ) +
-  
+
   # Individual anchor trajectories
   geom_step(
     alpha = 0.5,
     linewidth = 0.4,
     color = "black"
   ) +
-  
+
   labs(
     title = "2024 Instantaneous Calibration Drift, AS199610 Anchors",
     x = "Days since first calibration",
     y = "Maximum deviation from Day 0"
   ) +
-  
+
   scale_y_continuous(
     labels = scales::percent_format(
       accuracy = 0.01
     )
   ) +
-  
+
   theme_minimal() +
-  
+
   theme(
     legend.position = "right"
   )
@@ -4485,28 +4521,28 @@ ggplot(
     group = id
   )
 ) +
-  
+
   # Individual anchor trajectories
   geom_step(
     alpha = 0.5,
     linewidth = 0.4,
     color = "black"
   ) +
-  
+
   labs(
     title = "2026 Instantaneous Calibration Drift, AS199610 Anchors",
     x = "Days since first calibration",
     y = "Maximum deviation from Day 0"
   ) +
-  
+
   scale_y_continuous(
     labels = scales::percent_format(
       accuracy = 0.01
     )
   ) +
-  
+
   theme_minimal() +
-  
+
   theme(
     legend.position = "right"
   )
@@ -4515,7 +4551,7 @@ ggplot(
 
 ```{r}
 rangeanchor_summary_asn_instant <- cleaned_persistent_90_999_instant_both_geo %>%
-  rename(in_range_24 = days_in_range.x, 
+  rename(in_range_24 = days_in_range.x,
          in_range_26 = days_in_range.y,
          total_24 = total_days.x,
          total26 = total_days.y) %>%
@@ -4579,7 +4615,7 @@ To pare down the IDs for further analysis, we will take away the likely misplace
 ```{r}
 # get ASN summary for asns that are associated with 1 anchor only, find the ones with the most counts for being in the range, discuss asns and geography, confirm with country frequency table?
 rangeanchor_summary_single_asn_instant <- cleaned_persistent_90_999_instant_both_geo %>%
-  rename(in_range_24 = days_in_range.x, 
+  rename(in_range_24 = days_in_range.x,
          in_range_26 = days_in_range.y,
          total_24 = total_days.x,
          total26 = total_days.y) %>%
@@ -4588,19 +4624,19 @@ rangeanchor_summary_single_asn_instant <- cleaned_persistent_90_999_instant_both
   filter(asn != 14061,
          asn != 16276,
          asn != 3491,
-         asn != 57695, 
-         asn != 36236, 
+         asn != 57695,
+         asn != 36236,
          asn != 199524,
          asn != 8473,
          asn != 16347,
          asn != 20473,
          asn != 24940,
-         asn != 35574, 
-         asn != 39923, 
+         asn != 35574,
+         asn != 39923,
          asn != 197540,
          asn != 199610)
 
-kable(rangeanchor_summary_single_asn_instant, caption = "Anchors Associated with Unique ASNs") %>% kable_styling(position = "center") %>% 
+kable(rangeanchor_summary_single_asn_instant, caption = "Anchors Associated with Unique ASNs") %>% kable_styling(position = "center") %>%
   row_spec(c(5, 39, 49, 55, 75, 93, 94, 95), background = "yellow")
 ```
 
@@ -4630,35 +4666,35 @@ see if the same anchors come up for the 90-999 range
 cooked_instant_2024_specific2 <- left_join(cleaned_persistent_90_999_instant_both_geo, cooked_2024) %>%
   select(asn, id, date, calibration, days, drift, max.drift) %>%
   filter(id != 7198,
-         id != 7078, 
-         id != 6927, 
-         id != 6408, 
-         id != 6443, 
-         id != 6649, 
-         id != 6328, 
-         id != 7238, 
-         id != 6794, 
+         id != 7078,
+         id != 6927,
+         id != 6408,
+         id != 6443,
+         id != 6649,
+         id != 6328,
+         id != 7238,
+         id != 6794,
          id != 7193,
-         id != 7043, 
-         id != 7221, 
-         id != 7159, 
+         id != 7043,
+         id != 7221,
+         id != 7159,
          id != 6323)
 
 cooked_instant_2024_specific21 <- left_join(cooked_2024, landmarks) %>%
   select(asn, id, date, calibration, days, drift, max.drift) %>%
   filter(id != 7198,
-         id != 7078, 
-         id != 6927, 
-         id != 6408, 
-         id != 6443, 
-         id != 6649, 
-         id != 6328, 
-         id != 7238, 
-         id != 6794, 
+         id != 7078,
+         id != 6927,
+         id != 6408,
+         id != 6443,
+         id != 6649,
+         id != 6328,
+         id != 7238,
+         id != 6794,
          id != 7193,
-         id != 7043, 
-         id != 7221, 
-         id != 7159, 
+         id != 7043,
+         id != 7221,
+         id != 7159,
          id != 6323)
 ```
 
@@ -4666,34 +4702,34 @@ cooked_instant_2024_specific21 <- left_join(cooked_2024, landmarks) %>%
 cooked_instant_2026_specific2 <- left_join(cleaned_persistent_90_999_instant_both_geo, cooked_2026) %>%
   select(asn, id, date, calibration, days, drift, max.drift) %>%
   filter(id != 7198,
-         id != 7078, 
-         id != 6927, 
-         id != 6408, 
-         id != 6443, 
-         id != 6649, 
-         id != 6328, 
-         id != 7238, 
-         id != 6794, 
+         id != 7078,
+         id != 6927,
+         id != 6408,
+         id != 6443,
+         id != 6649,
+         id != 6328,
+         id != 7238,
+         id != 6794,
          id != 7193,
-         id != 7043, 
-         id != 7221, 
-         id != 7159, 
+         id != 7043,
+         id != 7221,
+         id != 7159,
          id != 6323)
 
 cooked_instant_2026_specific21 <- left_join(cooked_2026, landmarks) %>%
   select(asn, id, date, calibration, days, drift, max.drift) %>%
   filter(id != 7198,
-         id != 7078, 
-         id != 6408, 
-         id != 6443, 
-         id != 6649, 
-         id != 6328, 
-         id != 7238, 
-         id != 6794, 
+         id != 7078,
+         id != 6408,
+         id != 6443,
+         id != 6649,
+         id != 6328,
+         id != 7238,
+         id != 6794,
          id != 7193,
-         id != 7043, 
-         id != 7221, 
-         id != 7159, 
+         id != 7043,
+         id != 7221,
+         id != 7159,
          id != 6323)
 ```
 
@@ -4718,7 +4754,7 @@ ggplot(
     x = "Calendar days since first calibration",
     y = "Deviation from Day 0"
   )  +
-  
+
   # 25th percentile
   stat_summary(
     aes(
@@ -4729,7 +4765,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # Mean
   stat_summary(
     aes(
@@ -4740,7 +4776,7 @@ ggplot(
     geom = "line",
     linewidth = 0.5
   ) +
-  
+
   # 75th percentile
   stat_summary(
     aes(
@@ -4751,7 +4787,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # 90th percentile
   stat_summary(
     aes(
@@ -4762,7 +4798,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # 95th percentile
   stat_summary(
     aes(
@@ -4773,7 +4809,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # 99th percentile
   stat_summary(
     aes(
@@ -4784,7 +4820,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # 99.9th percentile
   stat_summary(
     aes(
@@ -4795,7 +4831,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # Colors and legend
   scale_color_manual(
     name = "Statistic",
@@ -4824,7 +4860,7 @@ ggplot(
     )
   ) +
   theme_minimal()+
-  
+
   theme(
     legend.position = "right"
   )
@@ -4850,7 +4886,7 @@ ggplot(
     x = "Calendar days since first calibration",
     y = "Deviation from Day 0"
   )  +
-  
+
   # 25th percentile
   stat_summary(
     aes(
@@ -4861,7 +4897,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # Mean
   stat_summary(
     aes(
@@ -4872,7 +4908,7 @@ ggplot(
     geom = "line",
     linewidth = 0.5
   ) +
-  
+
   # 75th percentile
   stat_summary(
     aes(
@@ -4883,7 +4919,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # 90th percentile
   stat_summary(
     aes(
@@ -4894,7 +4930,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # 95th percentile
   stat_summary(
     aes(
@@ -4905,7 +4941,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # 99th percentile
   stat_summary(
     aes(
@@ -4916,7 +4952,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # 99.9th percentile
   stat_summary(
     aes(
@@ -4927,7 +4963,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # Colors and legend
   scale_color_manual(
     name = "Statistic",
@@ -4980,7 +5016,7 @@ ggplot(
     x = "Calendar days since first calibration",
     y = "Deviation from Day 0"
   )  +
-  
+
   # 25th percentile
   stat_summary(
     aes(
@@ -4991,7 +5027,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # Mean
   stat_summary(
     aes(
@@ -5002,7 +5038,7 @@ ggplot(
     geom = "line",
     linewidth = 0.5
   ) +
-  
+
   # 75th percentile
   stat_summary(
     aes(
@@ -5013,7 +5049,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # 90th percentile
   stat_summary(
     aes(
@@ -5024,7 +5060,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # 95th percentile
   stat_summary(
     aes(
@@ -5035,7 +5071,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # 99th percentile
   stat_summary(
     aes(
@@ -5046,7 +5082,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # 99.9th percentile
   stat_summary(
     aes(
@@ -5057,7 +5093,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # Colors and legend
   scale_color_manual(
     name = "Statistic",
@@ -5086,7 +5122,7 @@ ggplot(
     )
   ) +
   theme_minimal()+
-  
+
   theme(
     legend.position = "right"
   )
@@ -5112,7 +5148,7 @@ ggplot(
     x = "Calendar days since first calibration",
     y = "Deviation from Day 0"
   )  +
-  
+
   # 25th percentile
   stat_summary(
     aes(
@@ -5123,7 +5159,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # Mean
   stat_summary(
     aes(
@@ -5134,7 +5170,7 @@ ggplot(
     geom = "line",
     linewidth = 0.5
   ) +
-  
+
   # 75th percentile
   stat_summary(
     aes(
@@ -5145,7 +5181,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # 90th percentile
   stat_summary(
     aes(
@@ -5156,7 +5192,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # 95th percentile
   stat_summary(
     aes(
@@ -5167,7 +5203,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # 99th percentile
   stat_summary(
     aes(
@@ -5178,7 +5214,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # 99.9th percentile
   stat_summary(
     aes(
@@ -5189,7 +5225,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # Colors and legend
   scale_color_manual(
     name = "Statistic",
@@ -5231,7 +5267,7 @@ ggplot(
     group = id
   )
 ) +
-  
+
   # Individual anchor trajectories
   geom_step(
     alpha = 0.06,
@@ -5243,7 +5279,7 @@ ggplot(
     x = "Calendar days since first calibration",
     y = "Deviation from Day 0"
   )  +
-  
+
   # 25th percentile
   stat_summary(
     aes(
@@ -5254,7 +5290,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # Mean
   stat_summary(
     aes(
@@ -5265,7 +5301,7 @@ ggplot(
     geom = "line",
     linewidth = 0.5
   ) +
-  
+
   # 75th percentile
   stat_summary(
     aes(
@@ -5276,7 +5312,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # 90th percentile
   stat_summary(
     aes(
@@ -5287,7 +5323,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # 95th percentile
   stat_summary(
     aes(
@@ -5298,7 +5334,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # 99th percentile
   stat_summary(
     aes(
@@ -5309,7 +5345,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # 99.9th percentile
   stat_summary(
     aes(
@@ -5320,7 +5356,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # Colors and legend
   scale_color_manual(
     name = "Statistic",
@@ -5363,7 +5399,7 @@ ggplot(
     group = id
   )
 ) +
-  
+
   # Individual anchor trajectories
   geom_step(
     alpha = 0.06,
@@ -5375,7 +5411,7 @@ ggplot(
     x = "Calendar days since first calibration",
     y = "Deviation from Day 0"
   )  +
-  
+
   # 25th percentile
   stat_summary(
     aes(
@@ -5386,7 +5422,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # Mean
   stat_summary(
     aes(
@@ -5397,7 +5433,7 @@ ggplot(
     geom = "line",
     linewidth = 0.5
   ) +
-  
+
   # 75th percentile
   stat_summary(
     aes(
@@ -5408,7 +5444,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # 90th percentile
   stat_summary(
     aes(
@@ -5419,7 +5455,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # 95th percentile
   stat_summary(
     aes(
@@ -5430,7 +5466,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # 99th percentile
   stat_summary(
     aes(
@@ -5441,7 +5477,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # 99.9th percentile
   stat_summary(
     aes(
@@ -5452,7 +5488,7 @@ ggplot(
     geom = "line",
     linewidth = 0.4
   ) +
-  
+
   # Colors and legend
   scale_color_manual(
     name = "Statistic",
